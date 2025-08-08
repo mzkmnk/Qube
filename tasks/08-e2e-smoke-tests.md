@@ -10,3 +10,4 @@
 
 受け入れ条件
 - 正常/異常の主要シナリオが Red→Green→Refactor を経てテスト化される。
+- CI/CD パイプライン（GitHub Actions 等）で自動実行される。

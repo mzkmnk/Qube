@@ -4,9 +4,17 @@
 - 成果物: `App` 構成、スクロール可能な出力、入力から Q CLI 実行、終了/クリアのキーバインド。
 
 作業項目
-- レイアウト: ヘッダー（タイトル/バージョン）、出力パネル（スクロール）、入力行、ステータスバー。
-- キーバインド: Enter 実行、Ctrl+C 終了、Ctrl+L クリア、↑↓ で履歴。
-- 実装分離: `components/Output`, `components/Input`, `lib/history`。
+- レイアウト構成:
+  - ヘッダー: `<Box>` と `<Text>` でタイトル/バージョン表示
+  - 出力パネル: `<Box flexDirection="column">` でスクロール可能な領域
+  - 入力行: `<TextInput>` コンポーネントまたは `useInput` フック
+  - ステータスバー: コマンド実行状態、エラー数など
+- キーバインド実装:
+  - `useInput` フックでキー入力をハンドリング
+  - Enter 実行、Ctrl+C 終了、Ctrl+L クリア、↑↓ で履歴
+- 実装分離:
+  - `components/Header.tsx`, `components/Output.tsx`, `components/Input.tsx`, `components/StatusBar.tsx`
+  - `lib/history.ts` （履歴管理）
 - ユニットテスト: レンダリングと基本操作（入力→出力表示）。
 
 受け入れ条件
