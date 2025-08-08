@@ -9,8 +9,7 @@
   },
   "scripts": {
     "dev": "tsx src/cli.tsx",
-    "build": "tsc && node -e \"const fs=require('fs'); const content=fs.readFileSync('dist/cli.js', 'utf8'); if(!content.startsWith('#!/usr/bin/env node')) fs.writeFileSync('dist/cli.js', '#!/usr/bin/env node\\n' + content)\"",
-    "start": "node dist/cli.js"
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
