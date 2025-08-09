@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "tsx src/cli.tsx",
-    "build": "node build.mjs",
+    "build": "tsup",
     "build:check": "tsc",
     "test": "vitest --no-watch",
     "test:watch": "vitest",
@@ -33,6 +33,7 @@
     "esbuild": "^0.25.8",
     "ink-testing-library": "^4.0.0",
     "ts-node": "^10.9.2",
+    "tsup": "^8.5.0",
     "tsx": "^4.20.3",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
