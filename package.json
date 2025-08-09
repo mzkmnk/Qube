@@ -4,10 +4,12 @@
   "description": "",
   "type": "module",
   "main": "index.js",
+  "bin": {
+    "qube": "dist/cli.js"
+  },
   "scripts": {
     "dev": "tsx src/cli.tsx",
-    "build": "tsc src/cli.tsx --outDir dist",
-    "start": "node dist/cli.js"
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
