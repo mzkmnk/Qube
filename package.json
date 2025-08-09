@@ -11,6 +11,7 @@
     "dev": "tsx src/cli.tsx",
     "build": "tsup",
     "build:check": "tsc",
+    "start": "node dist/cli.js",
     "test": "vitest --no-watch",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
