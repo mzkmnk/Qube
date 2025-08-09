@@ -1,5 +1,6 @@
 export { App } from './App.js';
 export { Header } from './Header.js';
 export { Output } from './Output.js';
+export { EnhancedOutput } from './EnhancedOutput.js';
 export { Input } from './Input.js';
 export { StatusBar } from './StatusBar.js';
