@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { spawn } from 'node:child_process'
-import { detectQCLI } from '../lib/index.js'
+import { detectQCLI } from '../lib/index.ts'
 import readline from 'node:readline'
 
 /**

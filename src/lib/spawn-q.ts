@@ -1,5 +1,5 @@
 import { spawn, type SpawnOptions } from 'node:child_process'
-import { detectQCLI } from './q-cli-detector.js'
+import { detectQCLI } from './q-cli-detector.ts'
 
 export interface SpawnQOptions {
   /** タイムアウト（ミリ秒） */

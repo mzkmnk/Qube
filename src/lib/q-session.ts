@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
-import { detectQCLI } from './q-cli-detector.js'
+import { detectQCLI } from './q-cli-detector.ts'
 import { Readable, Writable } from 'node:stream'
 
 /**

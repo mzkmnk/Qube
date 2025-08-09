@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { spawnQ, type SpawnQOptions } from './spawn-q.js'
+import { spawnQ, type SpawnQOptions } from './spawn-q.ts'
 import { EventEmitter } from 'node:events'
 import { Readable } from 'node:stream'
 import child_process from 'node:child_process'
-import * as qCliDetector from './q-cli-detector.js'
+import * as qCliDetector from './q-cli-detector.ts'
 
-vi.mock('./q-cli-detector.js')
+vi.mock('./q-cli-detector.ts')
 vi.mock('node:child_process')
 
 describe('spawnQ関数', () => {

@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { detectQCLI, spawnQ } from '../lib/index.js'
+import { detectQCLI, spawnQ } from '../lib/index.ts'
 
 async function main() {
   try {
