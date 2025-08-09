@@ -3,11 +3,9 @@ import { spawnQ, type SpawnQOptions } from './spawn-q.js'
 import { EventEmitter } from 'node:events'
 import { Readable } from 'node:stream'
 import child_process from 'node:child_process'
+import * as qCliDetector from './q-cli-detector.js'
 
-vi.mock('./q-cli-detector.js', () => ({
-  detectQCLI: vi.fn().mockResolvedValue('/usr/local/bin/amazonq')
-}))
-
+vi.mock('./q-cli-detector.js')
 vi.mock('node:child_process')
 
 describe('spawnQ関数', () => {
@@ -15,6 +13,9 @@ describe('spawnQ関数', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
+    
+    // detectQCLIのモックを設定
+    vi.mocked(qCliDetector.detectQCLI).mockResolvedValue('/usr/local/bin/amazonq')
     
     // child_processのモックを作成
     mockChildProcess = new EventEmitter()
@@ -30,6 +31,7 @@ describe('spawnQ関数', () => {
 
   afterEach(() => {
     vi.clearAllTimers()
+    vi.useRealTimers()
   })
 
   it('コマンドを実行し、標準出力を返す', async () => {
@@ -38,6 +40,9 @@ describe('spawnQ関数', () => {
     vi.mocked(child_process.spawn).mockImplementation(mockSpawn)
 
     const resultPromise = spawnQ(['--help'])
+
+    // detectQCLIの非同期処理を待つ
+    await new Promise(resolve => setImmediate(resolve))
 
     // 標準出力にデータを流す
     mockChildProcess.stdout.push('Amazon Q CLI Help\n')
@@ -70,6 +75,9 @@ describe('spawnQ関数', () => {
 
     const resultPromise = spawnQ(['invalid-command'])
 
+    // detectQCLIの非同期処理を待つ
+    await new Promise(resolve => setImmediate(resolve))
+
     // 標準エラー出力にデータを流す
     mockChildProcess.stderr.push('Error: Unknown command\n')
     mockChildProcess.stderr.push(null)
@@ -97,7 +105,7 @@ describe('spawnQ関数', () => {
     const resultPromise = spawnQ(['long-running-command'], options)
 
     // タイムアウトを発生させる
-    vi.advanceTimersByTime(1000)
+    await vi.advanceTimersByTimeAsync(1000)
 
     // Act & Assert
     await expect(resultPromise).rejects.toThrow('コマンドがタイムアウトしました (1秒)')
@@ -110,6 +118,9 @@ describe('spawnQ関数', () => {
     vi.mocked(child_process.spawn).mockImplementation(mockSpawn)
 
     const resultPromise = spawnQ(['test'])
+
+    // detectQCLIの非同期処理を待つ
+    await new Promise(resolve => setImmediate(resolve))
 
     // プロセスエラーを発生させる
     mockChildProcess.emit('error', new Error('spawn error'))
@@ -138,6 +149,9 @@ describe('spawnQ関数', () => {
 
     const resultPromise = spawnQ(['stream-test'], options)
 
+    // detectQCLIの非同期処理を待つ
+    await new Promise(resolve => setImmediate(resolve))
+
     // ストリーミングデータを流す
     mockChildProcess.stdout.push('chunk1')
     mockChildProcess.stdout.push('chunk2')
@@ -164,6 +178,9 @@ describe('spawnQ関数', () => {
     }
 
     const resultPromise = spawnQ(['test'], options)
+
+    // detectQCLIの非同期処理を待つ
+    await new Promise(resolve => setImmediate(resolve))
 
     mockChildProcess.stdout.push(null)
     mockChildProcess.stderr.push(null)
@@ -194,6 +211,9 @@ describe('spawnQ関数', () => {
     }
 
     const resultPromise = spawnQ(['test'], options)
+
+    // detectQCLIの非同期処理を待つ
+    await new Promise(resolve => setImmediate(resolve))
 
     mockChildProcess.stdout.push(null)
     mockChildProcess.stderr.push(null)
