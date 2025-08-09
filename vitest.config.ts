@@ -12,7 +12,7 @@ export default defineConfig({
     includeSource: ['src/**/*.{ts,tsx}'],
     // カバレッジ設定
     coverage: {
-      provider: 'c8',
+      provider: 'v8',
       reporter: ['text', 'html'],
       exclude: [
         'node_modules/',
