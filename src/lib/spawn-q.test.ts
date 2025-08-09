@@ -110,6 +110,9 @@ describe('spawnQ関数', () => {
     // Act & Assert
     await expect(resultPromise).rejects.toThrow('コマンドがタイムアウトしました (1秒)')
     expect(mockChildProcess.kill).toHaveBeenCalledWith('SIGTERM')
+    
+    // クリーンアップ: プロセスのcloseイベントを送信
+    mockChildProcess.emit('close', 1)
   })
 
   it('プロセス起動エラー時にエラーをスローする', async () => {

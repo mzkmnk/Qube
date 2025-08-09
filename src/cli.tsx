@@ -1,8 +1,8 @@
 import React from "react";
-import { render, Text } from "ink";
+import { render } from "ink";
+import { App } from "./components/App.js";
 
-const App = () => {
-    return <Text color="green">Hello, world!</Text>;
-};
+// パッケージバージョンの取得
+const packageJson = { version: "0.1.0" }; // TODO: package.jsonから動的に取得
 
-render(<App />);
+render(<App version={packageJson.version} />);
