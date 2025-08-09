@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Box, Text, useInput } from 'ink';
-import TextInput from 'ink-text-input';
+import { ControlledTextInput } from './ControlledTextInput.js';
 
 interface InputProps {
   prompt: string;
@@ -31,7 +31,7 @@ export const Input: React.FC<InputProps> = ({
   return (
     <Box>
       <Text color={disabled ? 'gray' : 'green'}>{prompt} </Text>
-      <TextInput
+      <ControlledTextInput
         value={value}
         placeholder={placeholder}
         onChange={onChange}
