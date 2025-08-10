@@ -16,7 +16,7 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
   const { exit } = useApp();
   
   // 状態管理
-  const [mode, setMode] = useState<'command' | 'session'>('command');
+  const [mode, setMode] = useState<'command' | 'session'>('session');
   const [status, setStatus] = useState<'ready' | 'running' | 'error'>('ready');
   const [outputLines, setOutputLines] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -24,11 +24,171 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
   const [errorCount, setErrorCount] = useState(0);
   const [history] = useState(() => new CommandHistory());
   const [session] = useState(() => new QSession());
+  const [sessionStarted, setSessionStarted] = useState(false);
+  const [streamBuffer, setStreamBuffer] = useState(''); // ストリーミングデータのバッファ
+  const [currentProgressLine, setCurrentProgressLine] = useState<string | null>(null); // 現在のプログレス行
   
+  // 起動時に自動的にQ chatセッションを開始
+  useEffect(() => {
+    if (!sessionStarted) {
+      const startSession = async () => {
+        try {
+          setStatus('running');
+          await session.start('chat');
+          setSessionStarted(true);
+          setStatus('ready');
+          // 初期メッセージは表示しない（Qからのメッセージのみ表示）
+          setOutputLines(prev => [...prev]);
+        } catch (error) {
+          setOutputLines(prev => [...prev, `❌ Failed to start Q session: ${error instanceof Error ? error.message : String(error)}`]);
+          setStatus('error');
+          setMode('command');
+        }
+      };
+      startSession();
+    }
+  }, [session, sessionStarted]);
+
   // セッションからの出力を処理
   useEffect(() => {
     const handleData = (type: string, data: string) => {
-      setOutputLines(prev => [...prev, ...data.split('\n').filter(line => line)]);
+      // ANSIエスケープシーケンスを完全に削除
+      let cleanData = data;
+      
+      // すべてのANSIエスケープコードを段階的に削除
+      cleanData = cleanData
+        .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')    // 標準的なエスケープシーケンス
+        .replace(/\x1b\].*?\x07/g, '')             // OSCシーケンス
+        .replace(/\x1b[PX^_].*?\x1b\\/g, '')       // DCS/PM/APC/SOS シーケンス
+        .replace(/\x1b[78]/g, '')                  // 保存/復元カーソル
+        .replace(/\x1b[=>]/g, '')                  // アプリケーションキーパッドモード
+        .replace(/\x1b\([0-2]/g, '')               // 文字セット指定
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // 制御文字（改行・キャリッジリターン以外）
+        .replace(/\x7f/g, '');                     // DEL文字
+      
+      // ANSIカラーコードの残骸を削除（38;5;12mのような形式）
+      cleanData = cleanData
+        .replace(/\x1b?\[?38;5;\d+m/g, '')        // 256色前景色
+        .replace(/\x1b?\[?48;5;\d+m/g, '')        // 256色背景色
+        .replace(/\x1b?\[?\d+;\d+m/g, '')         // その他の色コード（エスケープが欠けている場合も対応）
+        .replace(/^[\x1b\[]*\d+;\d+m/gm, '');     // 行頭のエスケープコード残骸のみ削除
+      
+      // バッファに追加
+      let buffer = streamBuffer + cleanData;
+      
+      // 処理する行のリスト
+      const linesToAdd: string[] = [];
+      let progressLine: string | null = null;
+      
+      // キャリッジリターン処理（プログレス表示用）
+      if (buffer.includes('\r')) {
+        const parts = buffer.split('\r');
+        const lastPart = parts[parts.length - 1];
+        
+        // プログレス表示のパターン
+        const progressPatterns = [
+          /⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏/,  // スピナー文字
+          /Thinking\.\.\./,               // Thinking...
+          /Loading\.\.\./,                // Loading...
+          /Processing\.\.\./              // Processing...
+        ];
+        
+        // プログレス表示かチェック
+        const isProgress = progressPatterns.some(pattern => pattern.test(lastPart));
+        
+        if (isProgress) {
+          // プログレス表示として処理
+          progressLine = lastPart.replace(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏0-9]+/, match => {
+            return match.replace(/[0-9]+/, '');
+          }).trim();
+          
+          if (progressLine) {
+            setCurrentProgressLine(progressLine);
+          }
+          
+          setStreamBuffer('');
+          return;
+        } else {
+          // 最後の部分だけを処理対象に
+          buffer = lastPart;
+        }
+      }
+      
+      // 改行があるかチェック
+      if (buffer.includes('\n')) {
+        // 改行で分割
+        const lines = buffer.split('\n');
+        
+        // 最後の行が不完全な可能性があるため、改行で終わっていない場合は保持
+        let incompleteBuffer = '';
+        if (!cleanData.endsWith('\n')) {
+          incompleteBuffer = lines.pop() || '';
+        }
+        
+        // 各行を処理
+        for (const line of lines) {
+          let trimmedLine = line.trim();
+          
+          // 残っている可能性のあるエスケープコードを削除
+          trimmedLine = trimmedLine
+            .replace(/^\[?\d+;\d+m/g, '')
+            .replace(/38;5;\d+m/g, '')
+            .replace(/48;5;\d+m/g, '')
+            .replace(/\d+;\d+m/g, '')
+            .replace(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s*/, '')
+            .replace(/^;+\s*/, '')
+            .trim();
+          
+          // 空行、プログレス行、Thinking行をスキップ
+          if (!trimmedLine) continue;
+          if (trimmedLine.match(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]/)) continue;
+          if (trimmedLine === 'Thinking...' || trimmedLine.includes('Thinking...')) continue;
+          
+          linesToAdd.push(trimmedLine);
+        }
+        
+        // バッファを更新
+        setStreamBuffer(incompleteBuffer);
+      } else {
+        // 改行がない場合、すべてをバッファに保持
+        // ただし、文の終わりを検出したら出力する
+        const sentenceEndPatterns = [
+          /[.!?]\s*$/,     // 文末記号
+          /:\s*$/,         // コロン
+          /commands$/,     // 特定のキーワード（「/help all commands」など）
+          /initialized\.?$/,  // 初期化メッセージ
+          /Q!$/,           // Welcome to Amazon Q!
+        ];
+        
+        // バッファが大きくなりすぎた場合、または文末パターンに一致する場合
+        if (buffer.length > 80 || sentenceEndPatterns.some(pattern => pattern.test(buffer.trim()))) {
+          const trimmedBuffer = buffer.trim()
+            .replace(/^\[?\d+;\d+m/g, '')
+            .replace(/38;5;\d+m/g, '')
+            .replace(/48;5;\d+m/g, '')
+            .replace(/\d+;\d+m/g, '')
+            .replace(/^;+\s*/, '')
+            .trim();
+          
+          if (trimmedBuffer && 
+              !trimmedBuffer.match(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]/) && 
+              trimmedBuffer !== 'Thinking...' && 
+              !trimmedBuffer.includes('Thinking...')) {
+            linesToAdd.push(trimmedBuffer);
+            setStreamBuffer('');
+          } else {
+            setStreamBuffer(buffer);
+          }
+        } else {
+          setStreamBuffer(buffer);
+        }
+      }
+      
+      // 新しい行がある場合のみ出力を更新
+      if (linesToAdd.length > 0) {
+        setOutputLines(prev => [...prev, ...linesToAdd]);
+        setCurrentProgressLine(null);
+      }
     };
     
     const handleExit = (code: number) => {
@@ -37,10 +197,11 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
       if (code !== 0) {
         setErrorCount(prev => prev + 1);
       }
+      setOutputLines(prev => [...prev, '⚠️ Q session ended']);
     };
     
     const handleError = (error: Error) => {
-      setOutputLines(prev => [...prev, `Error: ${error.message}`]);
+      setOutputLines(prev => [...prev, `❌ Error: ${error.message}`]);
       setStatus('error');
       setErrorCount(prev => prev + 1);
     };
@@ -54,7 +215,7 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
       session.removeListener('exit', handleExit);
       session.removeListener('error', handleError);
     };
-  }, [session]);
+  }, [session, streamBuffer]);
   
   // キーバインドの処理
   useInput((input, key) => {
@@ -105,8 +266,8 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
     history.add(command);
     history.resetPosition();
     
-    // 出力に追加
-    setOutputLines(prev => [...prev, `> ${command}`]);
+    // 出力に追加（プロンプトにアイコンを追加）
+    setOutputLines(prev => [...prev, `💬 ${command}`]);
     setInputValue('');
     setCurrentCommand(command);
     setStatus('running');
@@ -150,8 +311,15 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
   
   return (
     <Box flexDirection="column" height="100%">
-      <Header title="Qube" version={version} />
-      <Output lines={outputLines} />
+      <Header 
+        title="Qube" 
+        version={version} 
+        connected={sessionStarted && session.running}
+      />
+      <Output lines={[
+        ...outputLines,
+        ...(currentProgressLine ? [currentProgressLine] : [])
+      ]} />
       <Input
         prompt=">"
         value={inputValue}

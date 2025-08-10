@@ -14,7 +14,7 @@ interface InputProps {
 export const Input: React.FC<InputProps> = ({ 
   prompt, 
   value, 
-  placeholder = '', 
+  placeholder = 'Type your message...', 
   disabled = false,
   onChange, 
   onSubmit 
@@ -28,15 +28,26 @@ export const Input: React.FC<InputProps> = ({
     }
   });
 
+  // 動的なプロンプト表示
+  const promptDisplay = disabled ? '◌' : '▶';
+  const promptColor = disabled ? 'gray' : 'cyan';
+
   return (
-    <Box>
-      <Text color={disabled ? 'gray' : 'green'}>{prompt} </Text>
-      <ControlledTextInput
-        value={value}
-        placeholder={placeholder}
-        onChange={onChange}
-        focus={!disabled}
-      />
+    <Box 
+      borderStyle="single" 
+      borderColor={disabled ? 'gray' : 'gray'}
+      paddingX={1}
+      marginTop={1}
+    >
+      <Box>
+        <Text color={promptColor}>{promptDisplay} </Text>
+        <ControlledTextInput
+          value={value}
+          placeholder={disabled ? 'Processing...' : placeholder}
+          onChange={onChange}
+          focus={!disabled}
+        />
+      </Box>
     </Box>
   );
 };
