@@ -9,6 +9,86 @@ interface OutputProps {
 
 // コードブロックやマークダウンの検出とスタイリング
 const formatLine = (line: string): React.ReactNode => {
+  // Amazon Q CLI Tools関連の出力を処理
+  
+  // Tool使用開始（🛠️  Using tool: xxx）
+  if (line.match(/🛠️\s+Using tool:\s+(\w+)\s*(\([^)]*\))?/)) {
+    const match = line.match(/🛠️\s+Using tool:\s+(\w+)\s*(\([^)]*\))?/);
+    const toolName = match?.[1] || 'unknown';
+    const status = match?.[2] || '';
+    return (
+      <Box>
+        <Text color="blue">🔧 </Text>
+        <Text color="blue" bold>{toolName}</Text>
+        <Text color="gray" dimColor> {status}</Text>
+      </Box>
+    );
+  }
+  
+  // Tool実行中の詳細（Reading directory, Reading file等）
+  if (line.match(/^[│⋮●\s]*(Reading|Writing|Creating|Updating|Processing)\s+/) || 
+      line.match(/^(Reading|Writing|Creating|Updating|Processing)\s+/)) {
+    const cleanLine = line.replace(/^[│⋮●\s]*/, '').trim();
+    return (
+      <Box paddingLeft={2}>
+        <Text color="cyan" dimColor>  → {cleanLine}</Text>
+      </Box>
+    );
+  }
+  
+  // Tool成功メッセージ（✓ Successfully...）
+  if (line.match(/✓\s+Successfully\s+/)) {
+    const cleanLine = line.replace(/^[│⋮●\s]*/, '').trim();
+    const message = cleanLine.replace(/✓\s*/, '');
+    return (
+      <Box paddingLeft={2}>
+        <Text color="green">  ✓ </Text>
+        <Text color="green">{message}</Text>
+      </Box>
+    );
+  }
+  
+  // Tool完了メッセージ（● Completed in XXX）
+  if (line.match(/●\s+Completed\s+in\s+[\d.]+s/)) {
+    const match = line.match(/●\s+Completed\s+in\s+([\d.]+s)/);
+    const duration = match?.[1] || '';
+    return (
+      <Box paddingLeft={2}>
+        <Text color="green" dimColor>  ⏱ {duration}</Text>
+      </Box>
+    );
+  }
+  
+  // Tool検証失敗（Tool validation failed）
+  if (line.includes('Tool validation failed')) {
+    return (
+      <Box>
+        <Text color="red">⚠ </Text>
+        <Text color="red">Tool validation error</Text>
+      </Box>
+    );
+  }
+  
+  // Tool検証失敗の詳細（Failed to validate tool parameters）
+  if (line.match(/Failed to validate tool parameters:/)) {
+    const message = line.replace(/^[│⋮●\s]*Failed to validate tool parameters:\s*/, '').trim();
+    return (
+      <Box paddingLeft={2}>
+        <Text color="red" dimColor>  → {message}</Text>
+      </Box>
+    );
+  }
+  
+  // Tool関連の境界線や継続マーカーを非表示
+  if (line.match(/^[│⋮●\s]*$/) || line.match(/^\s*[│⋮●]+\s*$/)) {
+    return null; // 表示しない
+  }
+  
+  // Tool関連の冗長な出力をフィルタ
+  if (line.match(/^\s*[│⋮●]+\s+/) && !line.match(/(Reading|Writing|Creating|Updating|Processing|Successfully|Completed|Failed)/)) {
+    return null; // 表示しない
+  }
+  
   // コードブロックの検出
   if (line.startsWith('```')) {
     return <Text color="yellow" dimColor>{line}</Text>;
@@ -123,11 +203,18 @@ export const Output: React.FC<OutputProps> = ({ lines, height, scrollOffset = 0 
       {displayLines.length === 0 ? (
         <Text color="gray" dimColor>Waiting for output...</Text>
       ) : (
-        displayLines.map((line, index) => (
-          <Box key={`${index}-${line.substring(0, 10)}`}>
-            {formatLine(line)}
-          </Box>
-        ))
+        displayLines.map((line, index) => {
+          const formattedLine = formatLine(line);
+          // nullが返された場合は表示しない
+          if (formattedLine === null) {
+            return null;
+          }
+          return (
+            <Box key={`${index}-${line.substring(0, 10)}`}>
+              {formattedLine}
+            </Box>
+          );
+        }).filter(Boolean) // nullを除外
       )}
     </Box>
   );
