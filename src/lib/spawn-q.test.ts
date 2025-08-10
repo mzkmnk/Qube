@@ -104,15 +104,21 @@ describe('spawnQ関数', () => {
     const options: SpawnQOptions = { timeout: 1000 }
     const resultPromise = spawnQ(['long-running-command'], options)
 
+    // 先に拒否ハンドラを登録してからタイマーを進める（未処理拒否を防止）
+    const expectation = expect(resultPromise).rejects.toThrow('コマンドがタイムアウトしました (1秒)')
+
     // タイムアウトを発生させる
     await vi.advanceTimersByTimeAsync(1000)
 
     // Act & Assert
-    await expect(resultPromise).rejects.toThrow('コマンドがタイムアウトしました (1秒)')
+    await expectation
     expect(mockChildProcess.kill).toHaveBeenCalledWith('SIGTERM')
     
     // クリーンアップ: プロセスのcloseイベントを送信
     mockChildProcess.emit('close', 1)
+    
+    // 残りのタイマーをクリア
+    vi.clearAllTimers()
   })
 
   it('プロセス起動エラー時にエラーをスローする', async () => {

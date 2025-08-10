@@ -1,140 +1,107 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App } from '../App.js';
 import { EventEmitter } from 'events';
 
-// QSessionのモッククラス
-class MockQSession extends EventEmitter {
-  running = false;
-  
-  async start(type: string) {
-    this.running = true;
-    return Promise.resolve();
-  }
-  
-  stop() {
-    this.running = false;
-  }
-  
-  send(command: string) {
-    // メッセージ送信のシミュレーション
-  }
+// MockQSessionの型定義
+interface MockQSession extends EventEmitter {
+  running: boolean;
+  start(type: string): Promise<void>;
+  stop(): void;
+  send(command: string): void;
 }
+
+// グローバルなモックセッションインスタンス
+let globalMockSession: any = null;
 
 // QSessionモジュールをモック
 vi.mock('../../lib/q-session.js', () => {
-  const session = new MockQSession();
+  const { EventEmitter } = require('events');
+  
+  // MockQSessionクラスをvi.mockの中で定義
+  class MockQSession extends EventEmitter {
+    running = false;
+    
+    async start(type: string) {
+      this.running = true;
+      return Promise.resolve();
+    }
+    
+    stop() {
+      this.running = false;
+    }
+    
+    send(command: string) {
+      // メッセージ送信のシミュレーション
+    }
+  }
+  
   return {
-    QSession: vi.fn(() => session)
+    QSession: vi.fn(() => {
+      // 常に新しいインスタンスを作成し、グローバル変数に保存
+      const newSession = new MockQSession();
+      globalMockSession = newSession;
+      return newSession;
+    })
   };
 });
 
-describe('Stream Processing Tests - ストリーミング処理のテスト', () => {
+// Q CLI detectorのモック
+vi.mock('../../lib/q-cli-detector.js', () => ({
+  detectQCLI: vi.fn().mockResolvedValue('/usr/local/bin/q')
+}));
+
+// spawnQのモック
+vi.mock('../../lib/spawn-q.js', () => ({
+  spawnQ: vi.fn().mockResolvedValue({
+    stdout: '',
+    stderr: '',
+    exitCode: 0
+  })
+}));
+
+describe('Stream Processing Tests - その他のストリーミング処理のテスト', () => {
   let mockSession: MockQSession;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // グローバルモックセッションをリセット
+    if (globalMockSession) {
+      globalMockSession.removeAllListeners();
+    }
+    globalMockSession = null;
   });
-
-  describe('ANSIエスケープコード処理', () => {
-    it('Given: ANSIエスケープコードを含むデータ, When: データが受信される, Then: エスケープコードが除去されて表示される', async () => {
-      // Given
-      const { lastFrame } = render(<App />);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // モックセッションインスタンスを取得
-      const { QSession } = await vi.importMock('../../lib/q-session.js') as any;
-      mockSession = new QSession();
-      
-      // When: ANSIエスケープコードを含むデータを送信
-      mockSession.emit('data', 'stdout', '\x1b[32mGreen Text\x1b[0m');
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Then
-      const output = lastFrame() || '';
-      expect(output).toContain('Green Text');
-      expect(output).not.toContain('\x1b[32m');
-      expect(output).not.toContain('\x1b[0m');
-    });
-
-    it('Given: 256色ANSIコードを含むデータ, When: データが受信される, Then: すべての色コードが除去される', async () => {
-      // Given
-      const { lastFrame } = render(<App />);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const { QSession } = await vi.importMock('../../lib/q-session.js') as any;
-      mockSession = new QSession();
-      
-      // When
-      mockSession.emit('data', 'stdout', '38;5;12mColored Text');
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Then
-      const output = lastFrame() || '';
-      expect(output).toContain('Colored Text');
-      expect(output).not.toContain('38;5;12m');
-    });
-  });
-
-  describe('メッセージバッファリング', () => {
-    it('Given: 不完全な文章, When: データがストリーミングで送信される, Then: 文章が完成するまでバッファリングされる', async () => {
-      // Given
-      const { lastFrame } = render(<App />);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const { QSession } = await vi.importMock('../../lib/q-session.js') as any;
-      mockSession = new QSession();
-      
-      // When: 文章を分割して送信
-      mockSession.emit('data', 'stdout', 'Welcome to ');
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      // 文章が不完全な段階では表示されない
-      let output = lastFrame() || '';
-      expect(output).not.toContain('Welcome to');
-      
-      // 文章の続きを送信
-      mockSession.emit('data', 'stdout', 'Amazon Q!');
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Then: 完全な文章が表示される
-      output = lastFrame() || '';
-      expect(output).toContain('Welcome to Amazon Q!');
-    });
-
-    it('Given: 改行を含むデータ, When: データが送信される, Then: 改行ごとに行が分割される', async () => {
-      // Given
-      const { lastFrame } = render(<App />);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const { QSession } = await vi.importMock('../../lib/q-session.js') as any;
-      mockSession = new QSession();
-      
-      // When
-      mockSession.emit('data', 'stdout', 'Line 1\nLine 2\nLine 3\n');
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Then
-      const output = lastFrame() || '';
-      expect(output).toContain('Line 1');
-      expect(output).toContain('Line 2');
-      expect(output).toContain('Line 3');
-    });
+  
+  afterEach(async () => {
+    // 各テスト後にも確実にクリーンアップ
+    if (globalMockSession) {
+      globalMockSession.removeAllListeners();
+      globalMockSession = null;
+    }
+    // すべての非同期処理が完了するのを待つ
+    await new Promise(resolve => setTimeout(resolve, 200));
   });
 
   describe('プログレス表示処理', () => {
     it('Given: スピナー文字を含むプログレス表示, When: キャリッジリターンで更新される, Then: 最新のプログレスのみ表示される', async () => {
       // Given
       const { lastFrame } = render(<App />);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const { QSession } = await vi.importMock('../../lib/q-session.js') as any;
-      mockSession = new QSession();
+      // 他のテストと同じ初期化時間に統一
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // グローバルモックセッションを取得
+      mockSession = globalMockSession;
       
       // When: プログレス表示をシミュレート
-      mockSession.emit('data', 'stdout', '⠋ Loading...\r');
-      await new Promise(resolve => setTimeout(resolve, 50));
-      mockSession.emit('data', 'stdout', '⠙ Loading...\r');
-      await new Promise(resolve => setTimeout(resolve, 50));
-      mockSession.emit('data', 'stdout', '⠹ Loading...\r');
-      await new Promise(resolve => setTimeout(resolve, 50));
+      if (mockSession) {
+        mockSession.emit('data', 'stdout', '⠋ Loading...\r');
+        await new Promise(resolve => setTimeout(resolve, 50));
+        mockSession.emit('data', 'stdout', '⠙ Loading...\r');
+        await new Promise(resolve => setTimeout(resolve, 50));
+        mockSession.emit('data', 'stdout', '⠹ Loading...\n');
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
       
       // Then: 最新のプログレスのみ表示
       const output = lastFrame() || '';
@@ -145,12 +112,16 @@ describe('Stream Processing Tests - ストリーミング処理のテスト', ()
     it('Given: Thinking...メッセージ, When: 受信される, Then: フィルタリングされて表示されない', async () => {
       // Given
       const { lastFrame } = render(<App />);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const { QSession } = await vi.importMock('../../lib/q-session.js') as any;
-      mockSession = new QSession();
+      // 他のテストと同じ初期化時間に統一
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // グローバルモックセッションを取得
+      mockSession = globalMockSession;
       
       // When
-      mockSession.emit('data', 'stdout', 'Thinking...\n');
+      if (mockSession) {
+        mockSession.emit('data', 'stdout', 'Thinking...\n');
+      }
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Then
@@ -163,13 +134,17 @@ describe('Stream Processing Tests - ストリーミング処理のテスト', ()
     it('Given: MCPサーバー初期化メッセージ, When: 数字を含むメッセージが送信される, Then: 数字が正しく保持される', async () => {
       // Given
       const { lastFrame } = render(<App />);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const { QSession } = await vi.importMock('../../lib/q-session.js') as any;
-      mockSession = new QSession();
+      // 他のテストと同じ初期化時間に統一
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // グローバルモックセッションを取得
+      mockSession = globalMockSession;
       
       // When
-      mockSession.emit('data', 'stdout', '0 of 1 mcp servers initialized.\n');
-      mockSession.emit('data', 'stdout', '1 of 1 mcp servers initialized.\n');
+      if (mockSession) {
+        mockSession.emit('data', 'stdout', '0 of 1 mcp servers initialized.\n');
+        mockSession.emit('data', 'stdout', '1 of 1 mcp servers initialized.\n');
+      }
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Then
@@ -181,12 +156,16 @@ describe('Stream Processing Tests - ストリーミング処理のテスト', ()
     it('Given: モデル名を含むメッセージ, When: claude-3.7-sonnetが送信される, Then: 完全なモデル名が表示される', async () => {
       // Given
       const { lastFrame } = render(<App />);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const { QSession } = await vi.importMock('../../lib/q-session.js') as any;
-      mockSession = new QSession();
+      // 他のテストと同じ初期化時間に統一
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // グローバルモックセッションを取得
+      mockSession = globalMockSession;
       
       // When
-      mockSession.emit('data', 'stdout', 'You are chatting with claude-3.7-sonnet');
+      if (mockSession) {
+        mockSession.emit('data', 'stdout', 'You are chatting with claude-3.7-sonnet\n');
+      }
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Then

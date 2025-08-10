@@ -20,44 +20,47 @@ export const ControlledTextInput: React.FC<ControlledTextInputProps> = ({
   focus = true
 }) => {
   const [internalValue, setInternalValue] = useState(value);
-  const [skipNextChange, setSkipNextChange] = useState(false);
+  const blockNextRef = React.useRef(false);
+  const ctrlLTimeRef = React.useRef(0);
+  const previousValueRef = React.useRef(value);
   
   // 親コンポーネントからの value 変更を反映
   useEffect(() => {
     setInternalValue(value);
+    previousValueRef.current = value;
   }, [value]);
   
-  // Ctrl キーの組み合わせを検出してフラグを設定
+  // Ctrl キーの組み合わせを検出（より早いタイミングで検出）
   useInput((input, key) => {
-    // Ctrl キーの組み合わせが押された場合
-    if (key.ctrl && input !== 'd') {
-      // 次の onChange をスキップするフラグを立てる
-      setSkipNextChange(true);
-      // タイミングをずらしてフラグをリセット
-      setTimeout(() => setSkipNextChange(false), 50);
+    // Ctrl+L が押された場合
+    if (key.ctrl && input === 'l') {
+      blockNextRef.current = true;
+      ctrlLTimeRef.current = Date.now();
+      // フラグのリセットタイミングを調整
+      setTimeout(() => {
+        blockNextRef.current = false;
+      }, 50); // タイムアウトを長めに設定
     }
   }, { isActive: focus });
   
   // TextInput の onChange をラップ
   const handleChange = (newValue: string) => {
-    // Ctrl キーの組み合わせによる変更の場合はスキップ
-    if (skipNextChange) {
-      setSkipNextChange(false);
+    const now = Date.now();
+    const timeSinceCtrlL = now - ctrlLTimeRef.current;
+    
+    // Ctrl+L 直後（50ms以内）の 'l' 追加を検出
+    if ((blockNextRef.current || timeSinceCtrlL < 50) && 
+        newValue === previousValueRef.current + 'l') {
+      blockNextRef.current = false;
       // 内部値を元に戻す
-      setInternalValue(value);
+      setInternalValue(previousValueRef.current);
+      // onChange を呼ばない
       return;
     }
     
-    // Ctrl+L で 'l' が追加される問題を検出
-    // 値が1文字だけ増えて、その文字が 'l' の場合は無視
-    if (newValue.length === value.length + 1 && 
-        newValue.slice(-1) === 'l' &&
-        newValue.slice(0, -1) === value) {
-      // 最近 Ctrl が押された可能性があるので無視
-      return;
-    }
-    
+    // 正常な変更の場合
     setInternalValue(newValue);
+    previousValueRef.current = newValue;
     onChange(newValue);
   };
   

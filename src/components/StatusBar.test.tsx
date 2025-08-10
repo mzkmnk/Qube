@@ -7,21 +7,25 @@ describe('StatusBar コンポーネント', () => {
   it('ステータス情報を表示する', () => {
     const { lastFrame } = render(<StatusBar mode="command" status="ready" />);
     
-    expect(lastFrame()).toContain('command');
-    expect(lastFrame()).toContain('ready');
+    // mode="command"の場合、"Cmd"と表示される
+    expect(lastFrame()).toContain('Cmd');
+    // status="ready"の場合、●アイコンが表示される
+    expect(lastFrame()).toContain('●');
   });
 
   it('実行中のステータスを表示する', () => {
     const { lastFrame } = render(<StatusBar mode="session" status="running" />);
     
-    expect(lastFrame()).toContain('session');
-    expect(lastFrame()).toContain('running');
+    // mode="session"の場合、"Chat"と表示される
+    expect(lastFrame()).toContain('Chat');
+    // status="running"の場合、◌アイコンが表示される
+    expect(lastFrame()).toContain('◌');
   });
 
   it('エラー数を表示する', () => {
     const { lastFrame } = render(<StatusBar mode="command" status="ready" errorCount={3} />);
     
-    expect(lastFrame()).toContain('3');
+    expect(lastFrame()).toContain('[3]');
   });
 
   it('処理中のコマンドを表示する', () => {
@@ -33,7 +37,10 @@ describe('StatusBar コンポーネント', () => {
   it('キーバインドのヒントを表示する', () => {
     const { lastFrame } = render(<StatusBar mode="command" status="ready" showHelp={true} />);
     
-    // よく使うキーバインドのヒントが含まれているか
-    expect(lastFrame()).toMatch(/Ctrl\+C|Ctrl\+D|Ctrl\+L/);
+    // 実際の表示形式は "^C Stop  ^D Exit  ^L Clear  ↑↓ History"
+    expect(lastFrame()).toContain('^C Stop');
+    expect(lastFrame()).toContain('^D Exit');
+    expect(lastFrame()).toContain('^L Clear');
+    expect(lastFrame()).toContain('↑↓ History');
   });
 });
