@@ -178,4 +178,47 @@ describe('Output コンポーネント', () => {
       expect(contentArea).not.toMatch(/^\s*[⋮]\s*$/m);
     });
   });
+
+  describe('Amazon Q CLI 確認メッセージ', () => {
+    it('ANSIエスケープシーケンスを含む確認メッセージを美しくフォーマットする', () => {
+      const lines = ['[?25h Allow this action? Use \'t\' to trust (always allow) this tool for the session. [y/n/t]:'];
+      const { lastFrame } = render(<Output lines={lines} />);
+      
+      const output = lastFrame();
+      expect(output).toContain('🔐 Amazon Q - Permission Required');
+      expect(output).toContain('Allow this action?');
+      expect(output).toContain('[y]');
+      expect(output).toContain('Yes - Allow once');
+      expect(output).toContain('[n]');
+      expect(output).toContain('No - Deny action');
+      expect(output).toContain('[t]');
+      expect(output).toContain('Trust - Always allow this tool');
+      expect(output).toContain('Enter your choice:');
+      // ANSIエスケープシーケンスは表示されない
+      expect(output).not.toContain('[?25h');
+    });
+
+    it('シンプルな確認メッセージもフォーマットする', () => {
+      const lines = ['Allow this action? [y/n/t]:'];
+      const { lastFrame } = render(<Output lines={lines} />);
+      
+      const output = lastFrame();
+      expect(output).toContain('🔐 Amazon Q - Permission Required');
+      expect(output).toContain('Allow this action?');
+      expect(output).toContain('[y]');
+      expect(output).toContain('[n]');
+      expect(output).toContain('[t]');
+    });
+
+    it('カスタムメッセージ付きの確認プロンプトもフォーマットする', () => {
+      const lines = ['[?25h Do you want to execute this command? Use \'t\' to trust this tool. [y/n/t]:'];
+      const { lastFrame } = render(<Output lines={lines} />);
+      
+      const output = lastFrame();
+      expect(output).toContain('🔐 Amazon Q - Permission Required');
+      expect(output).toContain('Do you want to execute this command?');
+      expect(output).not.toContain('[?25h');
+      expect(output).not.toContain('[y/n/t]:');
+    });
+  });
 });

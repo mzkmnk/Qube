@@ -9,6 +9,45 @@ interface OutputProps {
 
 // コードブロックやマークダウンの検出とスタイリング
 const formatLine = (line: string): React.ReactNode => {
+  // Amazon Q CLI ユーザー確認メッセージの処理
+  
+  // ANSIエスケープシーケンスを含む確認メッセージ
+  if (line.match(/\[?\?25h.*\[y\/n\/t\]:?|.*\[y\/n\/t\]:?\s*$/) && 
+      (line.includes('?25h') || line.match(/\b(Allow|trust|action|command|execute)\b/i))) {
+    // ANSIエスケープシーケンスを除去し、メッセージを抽出
+    const cleanLine = line
+      .replace(/\[?\?25h\s*/, '')
+      .replace(/\s*\[y\/n\/t\]:?\s*$/, '')
+      .replace(/Use\s+'[^']*'\s+to\s+trust[^.]*\./i, '')
+      .trim();
+    
+    return (
+      <Box flexDirection="column" marginY={1} paddingX={1} borderStyle="round" borderColor="yellow">
+        <Box>
+          <Text color="yellow" bold>🔐 Amazon Q - Permission Required</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text color="white">{cleanLine || 'Allow this action?'}</Text>
+        </Box>
+        <Box marginTop={1} flexDirection="row" gap={1}>
+          <Text color="green" bold>[y]</Text>
+          <Text color="gray">Yes - Allow once</Text>
+        </Box>
+        <Box flexDirection="row" gap={1}>
+          <Text color="red" bold>[n]</Text>
+          <Text color="gray">No - Deny action</Text>
+        </Box>
+        <Box flexDirection="row" gap={1}>
+          <Text color="cyan" bold>[t]</Text>
+          <Text color="gray">Trust - Always allow this tool</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text color="yellow" dimColor>Enter your choice: </Text>
+        </Box>
+      </Box>
+    );
+  }
+  
   // Amazon Q CLI Tools関連の出力を処理
   
   // Tool使用開始（🛠️  Using tool: xxx）
