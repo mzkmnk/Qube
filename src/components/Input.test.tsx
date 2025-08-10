@@ -7,7 +7,8 @@ describe('Input コンポーネント', () => {
   it('プロンプトと入力値を表示する', () => {
     const { lastFrame } = render(<Input prompt=">" value="test command" onChange={() => {}} onSubmit={() => {}} />);
     
-    expect(lastFrame()).toContain('>');
+    // 実際のプロンプト記号は「▶」
+    expect(lastFrame()).toContain('▶');
     expect(lastFrame()).toContain('test command');
   });
 

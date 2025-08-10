@@ -16,31 +16,56 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   currentCommand,
   showHelp = false 
 }) => {
-  // ステータスの色を決定
-  const statusColor = status === 'error' ? 'red' : status === 'running' ? 'yellow' : 'green';
+  // ステータス表示を簡潔に
+  const getStatusDisplay = () => {
+    switch(status) {
+      case 'error':
+        return { icon: '✗', color: 'red' };
+      case 'running':
+        return { icon: '◌', color: 'yellow' };
+      case 'ready':
+        return { icon: '●', color: 'green' };
+      default:
+        return { icon: '○', color: 'gray' };
+    }
+  };
+
+  const statusDisplay = getStatusDisplay();
 
   return (
-    <Box justifyContent="space-between" borderStyle="single" borderTop={true} borderBottom={false} borderLeft={false} borderRight={false}>
+    <Box 
+      justifyContent="space-between" 
+      paddingX={1}
+      paddingY={0}
+      marginTop={1}
+    >
+      {/* 左側: ステータス情報 */}
       <Box>
-        <Text color="blue">[{mode}]</Text>
-        <Text> </Text>
-        <Text color={statusColor}>{status}</Text>
-        {currentCommand && (
-          <>
-            <Text> </Text>
-            <Text color="cyan">{currentCommand}</Text>
-          </>
-        )}
+        {/* ステータスインジケーター */}
+        <Text color={statusDisplay.color}>{statusDisplay.icon} </Text>
+        
+        {/* モード表示（シンプル） */}
+        <Text color="gray">
+          {mode === 'session' ? 'Chat' : 'Cmd'}
+        </Text>
+        
+        {/* エラーカウント */}
         {errorCount > 0 && (
-          <>
-            <Text> </Text>
-            <Text color="red">Errors: {errorCount}</Text>
-          </>
+          <Text color="red"> [{errorCount}]</Text>
+        )}
+        
+        {/* 実行中のコマンド */}
+        {status === 'running' && currentCommand && (
+          <Text color="gray" dimColor> • {currentCommand.length > 20 ? currentCommand.substring(0, 20) + '...' : currentCommand}</Text>
         )}
       </Box>
+      
+      {/* 右側: ショートカットヘルプ（コンパクト） */}
       {showHelp && (
         <Box>
-          <Text color="gray">Ctrl+C: Cancel | Ctrl+D: Exit | Ctrl+L: Clear</Text>
+          <Text color="gray" dimColor>
+            ^C Stop  ^D Exit  ^L Clear  ↑↓ History
+          </Text>
         </Box>
       )}
     </Box>

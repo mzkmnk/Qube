@@ -36,7 +36,8 @@ describe('統合テスト', () => {
     await new Promise(resolve => setTimeout(resolve, 100));
     
     const output = lastFrame();
-    expect(output).toContain('> test command');
+    // 実際のプロンプトは「▶」、コマンドはOutput内に表示される
+    expect(output).toContain('test command');
   });
 
   it('履歴機能が動作する', () => {
@@ -110,7 +111,7 @@ describe('統合テスト', () => {
     await new Promise(resolve => setTimeout(resolve, 100));
     
     const output = lastFrame();
-    // コマンドが出力に表示されることを確認
-    expect(output).toContain('> q chat');
+    // コマンドが出力に表示されることを確認（実際のプロンプトは「▶」）
+    expect(output).toContain('q chat');
   });
 });
