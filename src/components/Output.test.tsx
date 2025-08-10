@@ -221,4 +221,148 @@ describe('Output コンポーネント', () => {
       expect(output).not.toContain('[y/n/t]:');
     });
   });
+
+  describe('Markdown フォーマット', () => {
+    it('ヘッダーを適切にフォーマットする', () => {
+      const lines = [
+        '# H1 ヘッダー',
+        '## H2 ヘッダー',
+        '### H3 ヘッダー',
+        '#### H4 ヘッダー',
+        '##### H5 ヘッダー',
+        '###### H6 ヘッダー'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      expect(output).toContain('H1 ヘッダー');
+      expect(output).toContain('H2 ヘッダー');
+      expect(output).toContain('H3 ヘッダー');
+    });
+
+    it('太字テキストをフォーマットする', () => {
+      const lines = [
+        'これは **太字** のテストです',
+        'これは __太字__ のテストです'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      expect(output).toContain('太字');
+    });
+
+    it('イタリックテキストをフォーマットする', () => {
+      const lines = [
+        'これは *イタリック* のテストです',
+        'これは _イタリック_ のテストです'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      expect(output).toContain('イタリック');
+    });
+
+    it('インラインコードをフォーマットする', () => {
+      const lines = [
+        'これは `インラインコード` のテストです'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      expect(output).toContain('インラインコード');
+    });
+
+    it('コードブロックを美しくフォーマットする', () => {
+      const lines = [
+        '```typescript',
+        'const hello = "world";',
+        'console.log(hello);',
+        '```'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      expect(output).toContain('typescript');
+      expect(output).toContain('const hello');
+    });
+
+    it('リストを適切にフォーマットする', () => {
+      const lines = [
+        '- アイテム1',
+        '- アイテム2',
+        '  - サブアイテム',
+        '* アイテム3',
+        '+ アイテム4'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      expect(output).toContain('アイテム1');
+      expect(output).toContain('サブアイテム');
+    });
+
+    it('番号付きリストをフォーマットする', () => {
+      const lines = [
+        '1. 第一項目',
+        '2. 第二項目',
+        '   1. サブ項目',
+        '3. 第三項目'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      expect(output).toContain('第一項目');
+      expect(output).toContain('サブ項目');
+    });
+
+    it('引用をフォーマットする', () => {
+      const lines = [
+        '> これは引用です',
+        '> 複数行の引用',
+        '>> ネストした引用'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      expect(output).toContain('これは引用です');
+      expect(output).toContain('複数行の引用');
+    });
+
+    it('水平線を表示する', () => {
+      const lines = [
+        '---',
+        '***',
+        '___'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      // 水平線が何らかの形で表示されていることを確認
+      expect(output).toBeDefined();
+      expect(output?.length || 0).toBeGreaterThan(0);
+    });
+
+    it('リンクをフォーマットする', () => {
+      const lines = [
+        '[GitHub](https://github.com)',
+        '[ドキュメント](https://example.com/docs)'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      expect(output).toContain('GitHub');
+      expect(output).toContain('ドキュメント');
+    });
+  });
+
 });

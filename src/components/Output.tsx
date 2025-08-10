@@ -147,9 +147,159 @@ const formatLine = (line: string): React.ReactNode => {
     return null; // 表示しない
   }
   
-  // コードブロックの検出
+  // Markdown処理
+  
+  // ヘッダーの処理
+  const headerMatch = line.match(/^(#{1,6})\s+(.+)$/);
+  if (headerMatch) {
+    const level = headerMatch[1].length;
+    const text = headerMatch[2];
+    const colors = ['magenta', 'cyan', 'blue', 'green', 'yellow', 'white'];
+    const color = colors[level - 1] || 'white';
+    const prefixes = ['◆', '◇', '◈', '◉', '○', '●'];
+    const prefix = prefixes[level - 1] || '●';
+    
+    return (
+      <Box marginY={level <= 2 ? 1 : 0}>
+        <Text color={color} bold>
+          {prefix} {text}
+        </Text>
+      </Box>
+    );
+  }
+  
+  // コードブロックの開始・終了
   if (line.startsWith('```')) {
-    return <Text color="yellow" dimColor>{line}</Text>;
+    const language = line.substring(3).trim();
+    return (
+      <Box marginY={1}>
+        <Text color="yellow" dimColor>
+          {language ? `▼ ${language}` : '▼ Code'}
+        </Text>
+      </Box>
+    );
+  }
+  
+  // インラインコード、太字、イタリックの処理
+  let processedLine = line;
+  
+  // インラインコード: `code`
+  if (processedLine.includes('`')) {
+    const parts = processedLine.split(/(`[^`]+`)/);
+    return (
+      <Box>
+        {parts.map((part, index) => {
+          if (part.startsWith('`') && part.endsWith('`')) {
+            const code = part.slice(1, -1);
+            return (
+              <Text key={index} color="cyan" backgroundColor="gray">
+                {code}
+              </Text>
+            );
+          }
+          return <Text key={index}>{part}</Text>;
+        })}
+      </Box>
+    );
+  }
+  
+  // 太字: **text** または __text__
+  if (processedLine.match(/\*\*[^*]+\*\*|\__[^_]+\__/)) {
+    const parts = processedLine.split(/(\*\*[^*]+\*\*|__[^_]+__)/);
+    return (
+      <Box>
+        {parts.map((part, index) => {
+          if ((part.startsWith('**') && part.endsWith('**')) || 
+              (part.startsWith('__') && part.endsWith('__'))) {
+            const text = part.slice(2, -2);
+            return <Text key={index} bold>{text}</Text>;
+          }
+          return <Text key={index}>{part}</Text>;
+        })}
+      </Box>
+    );
+  }
+  
+  // イタリック: *text* または _text_
+  if (processedLine.match(/\*[^*]+\*|_[^_]+_/)) {
+    const parts = processedLine.split(/(\*[^*]+\*|_[^_]+_)/);
+    return (
+      <Box>
+        {parts.map((part, index) => {
+          if ((part.startsWith('*') && part.endsWith('*') && !part.startsWith('**')) || 
+              (part.startsWith('_') && part.endsWith('_') && !part.startsWith('__'))) {
+            const text = part.slice(1, -1);
+            return <Text key={index} italic>{text}</Text>;
+          }
+          return <Text key={index}>{part}</Text>;
+        })}
+      </Box>
+    );
+  }
+  
+  // リスト項目の処理
+  const listMatch = line.match(/^(\s*)([-*+]|\d+\.)\s+(.+)$/);
+  if (listMatch) {
+    const indent = listMatch[1].length;
+    const marker = listMatch[2];
+    const text = listMatch[3];
+    const isNumbered = /\d+\./.test(marker);
+    const symbol = isNumbered ? '▸' : '•';
+    
+    return (
+      <Box paddingLeft={Math.floor(indent / 2)}>
+        <Text color="blue">{symbol} </Text>
+        <Text>{text}</Text>
+      </Box>
+    );
+  }
+  
+  // 引用の処理
+  const quoteMatch = line.match(/^(>+)\s*(.*)$/);
+  if (quoteMatch) {
+    const level = quoteMatch[1].length;
+    const text = quoteMatch[2];
+    
+    return (
+      <Box paddingLeft={level} borderLeft borderColor="yellow">
+        <Text color="yellow" dimColor>▐ </Text>
+        <Text color="gray" italic>{text}</Text>
+      </Box>
+    );
+  }
+  
+  // 水平線の処理
+  if (line.match(/^(---+|\*\*\*+|___+)$/)) {
+    return (
+      <Box marginY={1}>
+        <Text color="gray" dimColor>
+          {'─'.repeat(Math.min(50, process.stdout.columns || 80))}
+        </Text>
+      </Box>
+    );
+  }
+  
+  // リンクの処理
+  if (line.includes('[') && line.includes('](')) {
+    const parts = line.split(/(\[[^\]]+\]\([^)]+\))/);
+    return (
+      <Box>
+        {parts.map((part, index) => {
+          const linkMatch = part.match(/\[([^\]]+)\]\(([^)]+)\)/);
+          if (linkMatch) {
+            const text = linkMatch[1];
+            const url = linkMatch[2];
+            return (
+              <Box key={index} flexDirection="row">
+                <Text color="blue" underline>{text}</Text>
+                <Text color="gray" dimColor> ({url})</Text>
+              </Box>
+            );
+          }
+          return <Text key={index}>{part}</Text>;
+        })}
+      </Box>
+    );
   }
   
   // プロンプト行の検出とスタイリング（ユーザー入力）
