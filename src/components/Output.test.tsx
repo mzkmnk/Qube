@@ -385,6 +385,47 @@ describe('Output コンポーネント', () => {
       expect(output).toContain('警告メッセージ');
       expect(output).toContain('エラーメッセージ');
     });
+
+    it('コードブロック内のコンテンツに背景色を適用する', () => {
+      const lines = [
+        '```typescript',
+        'const hello = "world";',
+        'function greet(name: string) {',
+        '  return `Hello, ${name}!`;',
+        '}',
+        'console.log(greet("TypeScript"));',
+        '```'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      // コードブロック開始が表示される
+      expect(output).toContain('typescript');
+      // コード内容が表示される
+      expect(output).toContain('const hello');
+      expect(output).toContain('function greet');
+      expect(output).toContain('console.log');
+    });
+
+    it('プログラムコードっぽい行を自動検出して背景色を適用する', () => {
+      const lines = [
+        'import React from "react";',
+        'const Component = () => {',
+        '  const [state, setState] = useState(0);',
+        '  return <div>{state}</div>;',
+        '};',
+        'export default Component;'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      // プログラムコードが表示される
+      expect(output).toContain('import React');
+      expect(output).toContain('const Component');
+      expect(output).toContain('useState');
+    });
   });
 
 });

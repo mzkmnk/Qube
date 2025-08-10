@@ -8,7 +8,7 @@ interface OutputProps {
 }
 
 // コードブロックやマークダウンの検出とスタイリング
-const formatLine = (line: string): React.ReactNode => {
+const formatLine = (line: string, isInCodeBlock = false): React.ReactNode => {
   // 汎用的なANSIエスケープシーケンスの除去（最初に処理）
   let cleanedLine = line;
   
@@ -384,6 +384,44 @@ const formatLine = (line: string): React.ReactNode => {
     return <Text dimColor>{line}</Text>;
   }
   
+  // コードブロック内の行処理
+  if (isInCodeBlock) {
+    return (
+      <Box paddingX={1}>
+        <Text color="green" backgroundColor="blackBright">
+          {line}
+        </Text>
+      </Box>
+    );
+  }
+  
+  // プログラムコードっぽい行の自動検出
+  const codePatterns = [
+    /^(import|export|from|const|let|var|function|class|interface|type)\s+/,
+    /^(if|else|for|while|switch|case|try|catch|finally)\s*\(/,
+    /^\s*(return|throw|break|continue)\s+/,
+    /^(public|private|protected|static|async|await)\s+/,
+    /[=<>!]=|[&|]{2}|[+\-*/%]=|\+\+|--|=>/,
+    /[\{\}\[\]();].*[\{\}\[\]();]/,
+    /^[\s]*\/\/|^[\s]*\/\*|^[\s]*\*/,
+    /^\s*[a-zA-Z_$][a-zA-Z0-9_$]*\s*[:=]\s*/,
+    /^[\s]*<[^>]+>/,
+    /console\.(log|error|warn|info)/,
+    /require\(|import\(/
+  ];
+  
+  const looksLikeCode = codePatterns.some(pattern => pattern.test(line));
+  
+  if (looksLikeCode) {
+    return (
+      <Box paddingX={1}>
+        <Text color="cyan" backgroundColor="blackBright">
+          {line}
+        </Text>
+      </Box>
+    );
+  }
+  
   // コンテンツのインデント
   if (line.startsWith('  ')) {
     return <Text color="gray">{line}</Text>;
@@ -406,6 +444,18 @@ export const Output: React.FC<OutputProps> = ({ lines, height, scrollOffset = 0 
     }
   }
 
+  // コードブロックの状態を追跡
+  let isInCodeBlock = false;
+  const processedLines = displayLines.map((line, index) => {
+    // コードブロックの開始・終了を検出
+    if (line.trim().startsWith('```')) {
+      isInCodeBlock = !isInCodeBlock;
+      return { line, index, isCodeBlockMarker: true, isInCodeBlock: false };
+    }
+    
+    return { line, index, isCodeBlockMarker: false, isInCodeBlock };
+  });
+
   return (
     <Box 
       flexDirection="column" 
@@ -416,17 +466,17 @@ export const Output: React.FC<OutputProps> = ({ lines, height, scrollOffset = 0 
       paddingX={1}
       paddingY={0}
     >
-      {displayLines.length === 0 ? (
+      {processedLines.length === 0 ? (
         <Text color="gray" dimColor>Waiting for output...</Text>
       ) : (
-        displayLines.map((line, index) => {
-          const formattedLine = formatLine(line);
+        processedLines.map((lineInfo, index) => {
+          const formattedLine = formatLine(lineInfo.line, lineInfo.isInCodeBlock);
           // nullが返された場合は表示しない
           if (formattedLine === null) {
             return null;
           }
           return (
-            <Box key={`${index}-${line.substring(0, 10)}`}>
+            <Box key={`${index}-${lineInfo.line.substring(0, 10)}`}>
               {formattedLine}
             </Box>
           );
