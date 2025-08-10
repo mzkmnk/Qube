@@ -363,6 +363,28 @@ describe('Output コンポーネント', () => {
       expect(output).toContain('GitHub');
       expect(output).toContain('ドキュメント');
     });
+
+    it('背景色付きの要素を適切にレンダリングする', () => {
+      const lines = [
+        '# 重要な見出し',
+        '```javascript',
+        'console.log("test");',
+        '```',
+        '> 重要な引用',
+        '⚠️ 警告メッセージ',
+        '❌ エラーメッセージ'
+      ];
+      
+      const { lastFrame } = render(<Output lines={lines} />);
+      const output = lastFrame();
+      
+      // 背景色付きで表示されることを確認
+      expect(output).toContain('重要な見出し');
+      expect(output).toContain('javascript');
+      expect(output).toContain('重要な引用');
+      expect(output).toContain('警告メッセージ');
+      expect(output).toContain('エラーメッセージ');
+    });
   });
 
 });

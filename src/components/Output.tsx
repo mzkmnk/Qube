@@ -155,13 +155,19 @@ const formatLine = (line: string): React.ReactNode => {
     const level = headerMatch[1].length;
     const text = headerMatch[2];
     const colors = ['magenta', 'cyan', 'blue', 'green', 'yellow', 'white'];
+    const bgColors = ['magentaBright', 'cyanBright', 'blueBright', 'greenBright', 'yellowBright', 'blackBright'];
     const color = colors[level - 1] || 'white';
+    const backgroundColor = level <= 2 ? bgColors[level - 1] : undefined;
     const prefixes = ['◆', '◇', '◈', '◉', '○', '●'];
     const prefix = prefixes[level - 1] || '●';
     
     return (
-      <Box marginY={level <= 2 ? 1 : 0}>
-        <Text color={color} bold>
+      <Box marginY={level <= 2 ? 1 : 0} paddingX={backgroundColor ? 1 : 0}>
+        <Text 
+          color={backgroundColor ? 'black' : color} 
+          backgroundColor={backgroundColor}
+          bold
+        >
           {prefix} {text}
         </Text>
       </Box>
@@ -172,8 +178,8 @@ const formatLine = (line: string): React.ReactNode => {
   if (line.startsWith('```')) {
     const language = line.substring(3).trim();
     return (
-      <Box marginY={1}>
-        <Text color="yellow" dimColor>
+      <Box marginY={1} paddingX={1}>
+        <Text color="black" backgroundColor="yellowBright">
           {language ? `▼ ${language}` : '▼ Code'}
         </Text>
       </Box>
@@ -325,9 +331,10 @@ const formatLine = (line: string): React.ReactNode => {
   // エラーメッセージ
   if (line.startsWith('❌')) {
     return (
-      <Box>
-        <Text color="red">✗ </Text>
-        <Text color="red">{line.substring(1).trim()}</Text>
+      <Box paddingX={1}>
+        <Text color="white" backgroundColor="redBright">
+          ✗ {line.substring(2).trim()}
+        </Text>
       </Box>
     );
   }
@@ -355,9 +362,10 @@ const formatLine = (line: string): React.ReactNode => {
   // 警告メッセージ
   if (line.startsWith('⚠️')) {
     return (
-      <Box>
-        <Text color="yellow">⚠ </Text>
-        <Text color="yellow">{line.substring(2).trim()}</Text>
+      <Box paddingX={1}>
+        <Text color="black" backgroundColor="yellowBright">
+          ⚠ {line.substring(2).trim()}
+        </Text>
       </Box>
     );
   }
