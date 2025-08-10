@@ -9,25 +9,44 @@ interface OutputProps {
 
 // コードブロックやマークダウンの検出とスタイリング
 const formatLine = (line: string): React.ReactNode => {
+  // 汎用的なANSIエスケープシーケンスの除去（最初に処理）
+  let cleanedLine = line;
+  
+  // 一般的なANSIエスケープシーケンスを除去
+  cleanedLine = cleanedLine
+    .replace(/\[?\?25h/g, '') // カーソル表示制御
+    .replace(/\[?\?25l/g, '') // カーソル非表示制御
+    .replace(/\x1b\[[0-9;]*[mKH]/g, '') // エスケープシーケンス（色・クリア等）
+    .replace(/\x1b\[[0-9;]*[mKH]/g, '') // エスケープシーケンス（16進表記）
+    .replace(/\[\?[0-9;]*[hlc]/g, '') // プライベートモードエスケープシーケンス
+    .trim();
+  
+  // 空行になった場合は処理しない
+  if (!cleanedLine) {
+    return null;
+  }
+  
+  // 以降の処理では cleanedLine を使用
+  line = cleanedLine;
+  
   // Amazon Q CLI ユーザー確認メッセージの処理
   
   // ANSIエスケープシーケンスを含む確認メッセージ
-  if (line.match(/\[?\?25h.*\[y\/n\/t\]:?|.*\[y\/n\/t\]:?\s*$/) && 
-      (line.includes('?25h') || line.match(/\b(Allow|trust|action|command|execute)\b/i))) {
-    // ANSIエスケープシーケンスを除去し、メッセージを抽出
-    const cleanLine = line
-      .replace(/\[?\?25h\s*/, '')
+  if (line.match(/.*\[y\/n\/t\]:?\s*$/) && 
+      line.match(/\b(Allow|trust|action|command|execute)\b/i)) {
+    // メッセージを抽出
+    const message = line
       .replace(/\s*\[y\/n\/t\]:?\s*$/, '')
       .replace(/Use\s+'[^']*'\s+to\s+trust[^.]*\./i, '')
       .trim();
-    
+
     return (
       <Box flexDirection="column" marginY={1} paddingX={1} borderStyle="round" borderColor="yellow">
         <Box>
           <Text color="yellow" bold>🔐 Amazon Q - Permission Required</Text>
         </Box>
         <Box marginTop={1}>
-          <Text color="white">{cleanLine || 'Allow this action?'}</Text>
+          <Text color="white">{message || 'Allow this action?'}</Text>
         </Box>
         <Box marginTop={1} flexDirection="row" gap={1}>
           <Text color="green" bold>[y]</Text>
