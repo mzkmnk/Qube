@@ -51,6 +51,9 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
 
   // セッションからの出力を処理
   useEffect(() => {
+    // バッファを保持するためのrefを使用
+    const bufferRef = { current: '' };
+    
     const handleData = (type: string, data: string) => {
       // ANSIエスケープシーケンスを完全に削除
       let cleanData = data;
@@ -74,7 +77,7 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
         .replace(/^[\x1b\[]*\d+;\d+m/gm, '');     // 行頭のエスケープコード残骸のみ削除
       
       // バッファに追加
-      let buffer = streamBuffer + cleanData;
+      let buffer = bufferRef.current + cleanData;
       
       // 処理する行のリスト
       const linesToAdd: string[] = [];
@@ -106,7 +109,7 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
             setCurrentProgressLine(progressLine);
           }
           
-          setStreamBuffer('');
+          bufferRef.current = '';
           return;
         } else {
           // 最後の部分だけを処理対象に
@@ -148,7 +151,7 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
         }
         
         // バッファを更新
-        setStreamBuffer(incompleteBuffer);
+        bufferRef.current = incompleteBuffer;
       } else {
         // 改行がない場合、すべてをバッファに保持
         // ただし、文の終わりを検出したら出力する
@@ -175,12 +178,12 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
               trimmedBuffer !== 'Thinking...' && 
               !trimmedBuffer.includes('Thinking...')) {
             linesToAdd.push(trimmedBuffer);
-            setStreamBuffer('');
+            bufferRef.current = '';
           } else {
-            setStreamBuffer(buffer);
+            bufferRef.current = buffer;
           }
         } else {
-          setStreamBuffer(buffer);
+          bufferRef.current = buffer;
         }
       }
       
@@ -215,7 +218,7 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
       session.removeListener('exit', handleExit);
       session.removeListener('error', handleError);
     };
-  }, [session, streamBuffer]);
+  }, [session]);
   
   // キーバインドの処理
   useInput((input, key) => {
