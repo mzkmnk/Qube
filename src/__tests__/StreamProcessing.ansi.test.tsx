@@ -51,14 +51,13 @@ vi.mock("../lib/q-cli-detector", () => ({
 vi.mock("../lib/spawn-q", () => ({
   spawnQ: vi.fn().mockResolvedValue({
     stdout: "",
-    stderr: "",
     exitCode: 0,
   }),
 }));
 
 describe("ANSIエスケープコード処理のテスト", () => {
-  let mockSession: MockQSession;
-  let App;
+  let mockSession: MockQSession | null;
+  let App: typeof import("../components/App").App;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -82,9 +81,7 @@ describe("ANSIエスケープコード処理のテスト", () => {
     mockSession = globalMockSession;
 
     // When
-    if (mockSession) {
-      mockSession.emit("data", "stdout", "\x1b[32mGreen Text\x1b[0m\n");
-    }
+    mockSession?.emit("data", "stdout", "\x1b[32mGreen Text\x1b[0m\n");
 
     await new Promise((resolve) => setTimeout(resolve, 150));
 
@@ -101,9 +98,7 @@ describe("ANSIエスケープコード処理のテスト", () => {
     mockSession = globalMockSession;
 
     // When
-    if (mockSession) {
-      mockSession.emit("data", "stdout", "\x1b[38;5;12mColored Text\x1b[0m\n");
-    }
+    mockSession?.emit("data", "stdout", "\x1b[38;5;12mColored Text\x1b[0m\n");
 
     await new Promise((resolve) => setTimeout(resolve, 150));
 

@@ -17,9 +17,9 @@ vi.mock("node-pty");
 type MockPty = {
   onData: (cb: (d: string) => void) => void;
   onExit: (cb: (e: { exitCode: number }) => void) => void;
-  write: Mock<[string], void>;
-  resize: Mock<[number, number], void>;
-  kill: Mock<[string?], void>;
+  write: Mock;
+  resize: Mock;
+  kill: Mock;
   pid: number;
   __emitData: (d: string) => void;
   __emitExit: (code: number) => void;
@@ -90,7 +90,7 @@ describe("spawnQ関数", () => {
       ["--help"],
       expect.objectContaining({
         cwd: undefined,
-        env: expect.any(Object),
+        env: expect.any(Object) as Record<string, unknown>,
       }),
     );
   });
@@ -191,7 +191,7 @@ describe("spawnQ関数", () => {
   it("環境変数を渡すことができる", async () => {
     // Arrange
     const mockSpawn = vi.fn().mockReturnValue(mockPty);
-    vi.mocked(pty.spawn).mockImplementation(mockSpawn);
+    vi.mocked(pty.spawn).mockImplementation(mockSpawn as typeof pty.spawn);
 
     const options: SpawnQOptions = {
       env: { CUSTOM_VAR: "test-value" },
@@ -214,16 +214,15 @@ describe("spawnQ関数", () => {
       expect.objectContaining({
         env: expect.objectContaining({
           CUSTOM_VAR: "test-value",
-        }),
+        }) as Record<string, unknown>,
       }),
     );
   });
 
   it("作業ディレクトリを指定できる", async () => {
     // Arrange
-    const pty = await import("node-pty");
     const mockSpawn = vi.fn().mockReturnValue(mockPty);
-    (vi.mocked(pty.spawn) as Mock).mockImplementation(mockSpawn);
+    vi.mocked(pty.spawn).mockImplementation(mockSpawn as typeof pty.spawn);
 
     const options: SpawnQOptions = {
       cwd: "/custom/working/directory",

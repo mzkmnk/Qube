@@ -8,22 +8,18 @@ vi.mock("../lib/spawn-q", () => ({
   spawnQ: vi.fn(),
 }));
 
-// App.tsxから型をインポートする代わりに、テスト内で定義
-type AppMode = "command" | "session";
-type Status = "ready" | "running" | "error";
-
 type MockSession = {
-  start: Mock<[string], Promise<void>>;
-  send: Mock<[string], void>;
-  stop: Mock<[], void>;
+  start: Mock;
+  send: Mock;
+  stop: Mock;
   running: boolean;
 };
 
 type MockCallbacks = {
-  onModeChange: Mock<[AppMode], void>;
-  onStatusChange: Mock<[Status], void>;
-  onOutput: Mock<[string | string[]], void>;
-  onError: Mock<[string], void>;
+  onModeChange: Mock;
+  onStatusChange: Mock;
+  onOutput: Mock;
+  onError: Mock;
 };
 
 describe("CommandExecutor", () => {
@@ -54,7 +50,10 @@ describe("CommandExecutor", () => {
       onError: vi.fn(),
     };
 
-    executor = new CommandExecutor(mockSession as QSession, mockCallbacks);
+    executor = new CommandExecutor(
+      mockSession as unknown as QSession,
+      mockCallbacks,
+    );
   });
 
   describe("コマンド実行", () => {

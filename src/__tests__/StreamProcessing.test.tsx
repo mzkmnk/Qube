@@ -53,14 +53,13 @@ vi.mock("../lib/q-cli-detector", () => ({
 vi.mock("../lib/spawn-q", () => ({
   spawnQ: vi.fn().mockResolvedValue({
     stdout: "",
-    stderr: "",
     exitCode: 0,
   }),
 }));
 
 describe("Stream Processing Tests - その他のストリーミング処理のテスト", () => {
-  let mockSession: MockQSession;
-  let App;
+  let mockSession: MockQSession | null;
+  let App: typeof import("../components/App").App;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -94,14 +93,12 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
       mockSession = globalMockSession;
 
       // When: プログレス表示をシミュレート
-      if (mockSession) {
-        mockSession.emit("data", "stdout", "⠋ Loading...\r");
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        mockSession.emit("data", "stdout", "⠙ Loading...\r");
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        mockSession.emit("data", "stdout", "⠹ Loading...\n");
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      }
+      mockSession?.emit("data", "stdout", "⠋ Loading...\r");
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      mockSession?.emit("data", "stdout", "⠙ Loading...\r");
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      mockSession?.emit("data", "stdout", "⠹ Loading...\n");
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Then: 最新のプログレスのみ表示（出力内の出現は最大1つ）
       const output = lastFrame() || "";
@@ -119,9 +116,7 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
       mockSession = globalMockSession;
 
       // When
-      if (mockSession) {
-        mockSession.emit("data", "stdout", "Thinking...\n");
-      }
+      mockSession?.emit("data", "stdout", "Thinking...\n");
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Then
@@ -141,10 +136,8 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
       mockSession = globalMockSession;
 
       // When
-      if (mockSession) {
-        mockSession.emit("data", "stdout", "0 of 1 mcp servers initialized.\n");
-        mockSession.emit("data", "stdout", "1 of 1 mcp servers initialized.\n");
-      }
+      mockSession?.emit("data", "stdout", "0 of 1 mcp servers initialized.\n");
+      mockSession?.emit("data", "stdout", "1 of 1 mcp servers initialized.\n");
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Then
@@ -163,13 +156,11 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
       mockSession = globalMockSession;
 
       // When
-      if (mockSession) {
-        mockSession.emit(
-          "data",
-          "stdout",
-          "You are chatting with claude-3.7-sonnet\n",
-        );
-      }
+      mockSession?.emit(
+        "data",
+        "stdout",
+        "You are chatting with claude-3.7-sonnet\n",
+      );
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Then
