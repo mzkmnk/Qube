@@ -9,20 +9,24 @@ vi.mock('../lib/spawn-q', () => ({
 }));
 
 describe('CommandExecutor', () => {
-    let mockSession: QSession;
+    let mockSession: any;
     let mockCallbacks: any;
     let executor: CommandExecutor;
+    let isSessionRunning: boolean;
 
     beforeEach(() => {
         vi.clearAllMocks();
 
-        // QSessionのモック
+        // QSessionのモック（runningはgetterとして提供）
+        isSessionRunning = false;
         mockSession = {
-            running: false,
             start: vi.fn(),
             send: vi.fn(),
             stop: vi.fn()
         } as any;
+        Object.defineProperty(mockSession, 'running', {
+            get: () => isSessionRunning
+        });
 
         // コールバックのモック
         mockCallbacks = {
@@ -74,7 +78,7 @@ describe('CommandExecutor', () => {
 
         it('セッション中のコマンドはセッションに送信', async () => {
             // Arrange
-            mockSession.running = true;
+            isSessionRunning = true;
             const command = 'test message';
 
             // Act
