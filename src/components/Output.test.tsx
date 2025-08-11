@@ -42,15 +42,11 @@ describe('Output コンポーネント', () => {
     expect(output).toBeDefined();
   });
 
-  it('ANSIカラーコードを含む行を正しく処理する', () => {
-    // The new formatLine function handles this. This test ensures the Output component
-    // correctly passes the line to the formatter and renders the result.
+  it('ANSIカラーコードを含む行をそのまま表示する', () => {
     const lines = ['\u001b[32mGreen text\u001b[0m'];
     const { lastFrame } = render(<Output lines={lines} />);
 
     const output = lastFrame();
-    // The formatter will remove the ANSI codes, so we check for the plain text.
     expect(output).toContain('Green text');
-    expect(output).not.toContain('\u001b[32m');
   });
 });

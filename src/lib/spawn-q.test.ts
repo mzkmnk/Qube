@@ -1,15 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { spawnQ, type SpawnQOptions } from './spawn-q.ts'
-import { EventEmitter } from 'node:events'
-import { Readable } from 'node:stream'
-import child_process from 'node:child_process'
 import * as qCliDetector from './q-cli-detector.ts'
+import * as pty from 'node-pty'
+import type { IPty } from 'node-pty'
 
 vi.mock('./q-cli-detector.ts')
-vi.mock('node:child_process')
+vi.mock('node-pty')
 
 describe('spawnQ関数', () => {
-  let mockChildProcess: any
+  let mockPty: IPty & { __emitData: (data: string) => void; __emitExit: (code: number) => void }
 
   beforeEach(() => {
     vi.resetAllMocks()
@@ -17,16 +16,22 @@ describe('spawnQ関数', () => {
     // detectQCLIのモックを設定
     vi.mocked(qCliDetector.detectQCLI).mockResolvedValue('/usr/local/bin/amazonq')
     
-    // child_processのモックを作成
-    mockChildProcess = new EventEmitter()
-    mockChildProcess.stdout = new Readable({
-      read() {}
-    })
-    mockChildProcess.stderr = new Readable({
-      read() {}
-    })
-    mockChildProcess.kill = vi.fn()
-    mockChildProcess.pid = 12345
+    // node-ptyのモックを作成
+    const listeners: { data?: (d: string) => void; exit?: (e: { exitCode: number }) => void } = {}
+    mockPty = {
+      onData: (cb: (data: string) => void) => {
+        listeners.data = cb
+      },
+      onExit: (cb: (e: { exitCode: number }) => void) => {
+        listeners.exit = cb
+      },
+      write: vi.fn(),
+      resize: vi.fn(),
+      kill: vi.fn(),
+      pid: 12345,
+      __emitData: (d: string) => listeners.data?.(d),
+      __emitExit: (code: number) => listeners.exit?.({ exitCode: code })
+    } as any
   })
 
   afterEach(() => {
@@ -36,21 +41,20 @@ describe('spawnQ関数', () => {
 
   it('コマンドを実行し、標準出力を返す', async () => {
     // Arrange
-    const mockSpawn = vi.fn().mockReturnValue(mockChildProcess)
-    vi.mocked(child_process.spawn).mockImplementation(mockSpawn)
+    const mockSpawn = vi.fn().mockReturnValue(mockPty)
+    vi.mocked(pty.spawn).mockImplementation(mockSpawn)
 
     const resultPromise = spawnQ(['--help'])
 
     // detectQCLIの非同期処理を待つ
     await new Promise(resolve => setImmediate(resolve))
 
-    // 標準出力にデータを流す
-    mockChildProcess.stdout.push('Amazon Q CLI Help\n')
-    mockChildProcess.stdout.push('Version: 1.0.0\n')
-    mockChildProcess.stdout.push(null) // ストリーム終了
+    // PTY出力にデータを流す（stderrはPTYでは統合）
+    mockPty.__emitData('Amazon Q CLI Help\n')
+    mockPty.__emitData('Version: 1.0.0\n')
 
     // プロセス正常終了
-    mockChildProcess.emit('close', 0)
+    mockPty.__emitExit(0)
 
     // Act
     const result = await resultPromise
@@ -63,43 +67,40 @@ describe('spawnQ関数', () => {
       '/usr/local/bin/amazonq',
       ['--help'],
       expect.objectContaining({
-        stdio: ['inherit', 'pipe', 'pipe']
+        cwd: undefined,
+        env: expect.any(Object)
       })
     )
   })
 
-  it('標準エラー出力も取得する', async () => {
+  it('TTYではstderrは統合される（stdoutに含まれる）', async () => {
     // Arrange
-    const mockSpawn = vi.fn().mockReturnValue(mockChildProcess)
-    vi.mocked(child_process.spawn).mockImplementation(mockSpawn)
+    const mockSpawn = vi.fn().mockReturnValue(mockPty)
+    vi.mocked(pty.spawn).mockImplementation(mockSpawn)
 
     const resultPromise = spawnQ(['invalid-command'])
 
     // detectQCLIの非同期処理を待つ
     await new Promise(resolve => setImmediate(resolve))
 
-    // 標準エラー出力にデータを流す
-    mockChildProcess.stderr.push('Error: Unknown command\n')
-    mockChildProcess.stderr.push(null)
-    mockChildProcess.stdout.push(null)
-
-    // プロセス異常終了
-    mockChildProcess.emit('close', 1)
+    // PTYでは全てonDataで届く
+    mockPty.__emitData('Error: Unknown command\n')
+    mockPty.__emitExit(1)
 
     // Act
     const result = await resultPromise
 
     // Assert
-    expect(result.stdout).toBe('')
-    expect(result.stderr).toBe('Error: Unknown command\n')
+    expect(result.stdout).toBe('Error: Unknown command\n')
+    expect(result.stderr).toBe('')
     expect(result.exitCode).toBe(1)
   })
 
   it('タイムアウト時にエラーをスローする', async () => {
     // Arrange
     vi.useFakeTimers()
-    const mockSpawn = vi.fn().mockReturnValue(mockChildProcess)
-    vi.mocked(child_process.spawn).mockImplementation(mockSpawn)
+    const mockSpawn = vi.fn().mockReturnValue(mockPty)
+    vi.mocked(pty.spawn).mockImplementation(mockSpawn)
 
     const options: SpawnQOptions = { timeout: 1000 }
     const resultPromise = spawnQ(['long-running-command'], options)
@@ -112,36 +113,27 @@ describe('spawnQ関数', () => {
 
     // Act & Assert
     await expectation
-    expect(mockChildProcess.kill).toHaveBeenCalledWith('SIGTERM')
+    expect(mockPty.kill).toHaveBeenCalled()
     
-    // クリーンアップ: プロセスのcloseイベントを送信
-    mockChildProcess.emit('close', 1)
+    // クリーンアップ: プロセスのexitイベントを送信
+    mockPty.__emitExit(1)
     
     // 残りのタイマーをクリア
     vi.clearAllTimers()
   })
 
   it('プロセス起動エラー時にエラーをスローする', async () => {
-    // Arrange
-    const mockSpawn = vi.fn().mockReturnValue(mockChildProcess)
-    vi.mocked(child_process.spawn).mockImplementation(mockSpawn)
-
-    const resultPromise = spawnQ(['test'])
-
-    // detectQCLIの非同期処理を待つ
-    await new Promise(resolve => setImmediate(resolve))
-
-    // プロセスエラーを発生させる
-    mockChildProcess.emit('error', new Error('spawn error'))
+    // Arrange: spawn自体が例外を投げる
+    vi.mocked(pty.spawn).mockImplementation(() => { throw new Error('spawn error') as any })
 
     // Act & Assert
-    await expect(resultPromise).rejects.toThrow('Q CLIの起動に失敗しました: spawn error')
+    await expect(spawnQ(['test'])).rejects.toThrow('Q CLIの起動に失敗しました: spawn error')
   })
 
   it('onDataコールバックでストリーミングデータを受け取る', async () => {
     // Arrange
-    const mockSpawn = vi.fn().mockReturnValue(mockChildProcess)
-    vi.mocked(child_process.spawn).mockImplementation(mockSpawn)
+    const mockSpawn = vi.fn().mockReturnValue(mockPty)
+    vi.mocked(pty.spawn).mockImplementation(mockSpawn)
 
     const stdoutChunks: string[] = []
     const stderrChunks: string[] = []
@@ -161,26 +153,24 @@ describe('spawnQ関数', () => {
     // detectQCLIの非同期処理を待つ
     await new Promise(resolve => setImmediate(resolve))
 
-    // ストリーミングデータを流す
-    mockChildProcess.stdout.push('chunk1')
-    mockChildProcess.stdout.push('chunk2')
-    mockChildProcess.stderr.push('error1')
-    mockChildProcess.stdout.push(null)
-    mockChildProcess.stderr.push(null)
-    mockChildProcess.emit('close', 0)
+    // ストリーミングデータを流す（TTYでは統合）
+    mockPty.__emitData('chunk1')
+    mockPty.__emitData('chunk2')
+    mockPty.__emitData('error1')
+    mockPty.__emitExit(0)
 
     // Act
     await resultPromise
 
     // Assert
-    expect(stdoutChunks).toEqual(['chunk1', 'chunk2'])
-    expect(stderrChunks).toEqual(['error1'])
+    expect(stdoutChunks).toEqual(['chunk1', 'chunk2', 'error1'])
+    expect(stderrChunks).toEqual([])
   })
 
   it('環境変数を渡すことができる', async () => {
     // Arrange
-    const mockSpawn = vi.fn().mockReturnValue(mockChildProcess)
-    vi.mocked(child_process.spawn).mockImplementation(mockSpawn)
+    const mockSpawn = vi.fn().mockReturnValue(mockPty)
+    vi.mocked(pty.spawn).mockImplementation(mockSpawn)
 
     const options: SpawnQOptions = {
       env: { CUSTOM_VAR: 'test-value' }
@@ -191,9 +181,7 @@ describe('spawnQ関数', () => {
     // detectQCLIの非同期処理を待つ
     await new Promise(resolve => setImmediate(resolve))
 
-    mockChildProcess.stdout.push(null)
-    mockChildProcess.stderr.push(null)
-    mockChildProcess.emit('close', 0)
+    mockPty.__emitExit(0)
 
     // Act
     await resultPromise
@@ -212,8 +200,9 @@ describe('spawnQ関数', () => {
 
   it('作業ディレクトリを指定できる', async () => {
     // Arrange
-    const mockSpawn = vi.fn().mockReturnValue(mockChildProcess)
-    vi.mocked(child_process.spawn).mockImplementation(mockSpawn)
+    const pty = await import('node-pty')
+    const mockSpawn = vi.fn().mockReturnValue(mockPty)
+    vi.mocked(pty.spawn as any).mockImplementation(mockSpawn)
 
     const options: SpawnQOptions = {
       cwd: '/custom/working/directory'
@@ -224,9 +213,7 @@ describe('spawnQ関数', () => {
     // detectQCLIの非同期処理を待つ
     await new Promise(resolve => setImmediate(resolve))
 
-    mockChildProcess.stdout.push(null)
-    mockChildProcess.stderr.push(null)
-    mockChildProcess.emit('close', 0)
+    mockPty.__emitExit(0)
 
     // Act
     await resultPromise

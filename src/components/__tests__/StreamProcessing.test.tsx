@@ -103,7 +103,7 @@ describe('Stream Processing Tests - その他のストリーミング処理の�
         await new Promise(resolve => setTimeout(resolve, 50));
       }
       
-      // Then: 最新のプログレスのみ表示
+      // Then: 最新のプログレスのみ表示（出力内の出現は最大1つ）
       const output = lastFrame() || '';
       expect(output).toContain('Loading...');
       expect(output.match(/Loading\.\.\./g)?.length).toBeLessThanOrEqual(1);

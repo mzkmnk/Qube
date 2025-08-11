@@ -75,7 +75,7 @@ describe('ANSIエスケープコード処理のテスト', () => {
     await new Promise(resolve => setTimeout(resolve, 100));
   });
 
-  it('Given: ANSIエスケープコードを含むデータ, When: データが受信される, Then: エスケープコードが除去されて表示される', async () => {
+  it('Given: ANSIエスケープコードを含むデータ, When: データが受信される, Then: 生データが表示される', async () => {
     // Given
     const { lastFrame } = render(<App />);
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -92,11 +92,9 @@ describe('ANSIエスケープコード処理のテスト', () => {
     // Then
     const output = lastFrame() || '';
     expect(output).toContain('Green Text');
-    expect(output).not.toContain('\x1b[32m');
-    expect(output).not.toContain('\x1b[0m');
   });
 
-  it('Given: 256色ANSIコードを含むデータ, When: データが受信される, Then: すべての色コードが除去される', async () => {
+  it('Given: 256色ANSIコードを含むデータ, When: データが受信される, Then: 生データが表示される', async () => {
     // Given
     const { lastFrame } = render(<App />);
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -113,6 +111,5 @@ describe('ANSIエスケープコード処理のテスト', () => {
     // Then
     const output = lastFrame() || '';
     expect(output).toContain('Colored Text');
-    expect(output).not.toContain('38;5;12m');
   });
 });

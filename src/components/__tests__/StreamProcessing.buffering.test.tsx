@@ -123,7 +123,7 @@ describe('メッセージバッファリング処理のテスト', () => {
     expect(output).toContain('Line 3');
   });
 
-  it('Given: 文末記号を含むデータ, When: 改行なしで送信される, Then: 文が完成したら表示される', async () => {
+  it('Given: 文末記号を含むデータ, When: 改行なしで送信される, Then: 改行が来るまでバッファリングされる', async () => {
     // Given
     const { lastFrame } = render(<App />);
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -135,9 +135,9 @@ describe('メッセージバッファリング処理のテスト', () => {
       mockSession.emit('data', 'stdout', 'Welcome to Amazon Q!');
       await new Promise(resolve => setTimeout(resolve, 150));
       
-      // Then: 文末記号があるため表示される（App.tsxの実装に基づく）
+      // Then: パススルー方針のため改行が来るまで表示されない
       const output = lastFrame() || '';
-      expect(output).toContain('Welcome to Amazon Q!');
+      expect(output).not.toContain('Welcome to Amazon Q!');
     }
   });
 });

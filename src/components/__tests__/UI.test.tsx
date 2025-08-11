@@ -45,7 +45,7 @@ describe('UI Component Tests - UIコンポーネントのテスト', () => {
       expect(output).toContain('Waiting for output...');
     });
 
-    it('Given: 出力コンポーネント, When: ユーザーメッセージ, Then: 適切なアイコンとスタイルで表示される', () => {
+    it('Given: 出力コンポーネント, When: ユーザーメッセージ, Then: 生データがそのまま表示される', () => {
       // Given & When
       const { lastFrame } = render(
         <Output lines={['💬 Hello Q']} />
@@ -53,11 +53,10 @@ describe('UI Component Tests - UIコンポーネントのテスト', () => {
       
       // Then
       const output = lastFrame() || '';
-      expect(output).toContain('▶');
-      expect(output).toContain('Hello Q');
+      expect(output).toContain('💬 Hello Q');
     });
 
-    it('Given: 出力コンポーネント, When: エラーメッセージ, Then: 赤色のエラーアイコンで表示される', () => {
+    it('Given: 出力コンポーネント, When: エラーメッセージ, Then: 生データがそのまま表示される', () => {
       // Given & When
       const { lastFrame } = render(
         <Output lines={['❌ Error occurred']} />
@@ -65,11 +64,10 @@ describe('UI Component Tests - UIコンポーネントのテスト', () => {
       
       // Then
       const output = lastFrame() || '';
-      expect(output).toContain('✗');
-      expect(output).toContain('Error occurred');
+      expect(output).toContain('❌ Error occurred');
     });
 
-    it('Given: 出力コンポーネント, When: 成功メッセージ, Then: 緑色の成功アイコンで表示される', () => {
+    it('Given: 出力コンポーネント, When: 成功メッセージ, Then: 生データがそのまま表示される', () => {
       // Given & When
       const { lastFrame } = render(
         <Output lines={['✅ Connection successful']} />
@@ -77,11 +75,10 @@ describe('UI Component Tests - UIコンポーネントのテスト', () => {
       
       // Then
       const output = lastFrame() || '';
-      expect(output).toContain('✓');
-      expect(output).toContain('Connection successful');
+      expect(output).toContain('✅ Connection successful');
     });
 
-    it('Given: 出力コンポーネント, When: AIレスポンス, Then: マゼンタのアイコンで表示される', () => {
+    it('Given: 出力コンポーネント, When: AIレスポンス, Then: 生データがそのまま表示される', () => {
       // Given & When
       const { lastFrame } = render(
         <Output lines={['🤖 You are chatting with claude']} />
@@ -89,8 +86,7 @@ describe('UI Component Tests - UIコンポーネントのテスト', () => {
       
       // Then
       const output = lastFrame() || '';
-      expect(output).toContain('◆');
-      expect(output).toContain('You are chatting with claude');
+      expect(output).toContain('🤖 You are chatting with claude');
     });
   });
 

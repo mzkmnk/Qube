@@ -1,31 +1,33 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { QSession } from './q-session.js';
-import * as childProcess from 'node:child_process';
-import { EventEmitter } from 'node:events';
+import * as pty from 'node-pty';
+import type { IPty } from 'node-pty';
 
 // モックの設定
-vi.mock('node:child_process');
+vi.mock('node-pty');
 vi.mock('./q-cli-detector.ts', () => ({
   detectQCLI: vi.fn().mockResolvedValue('/usr/local/bin/q')
 }));
 
 describe('QSession', () => {
   let session: QSession;
-  let mockProcess: any;
+  let mockPty: IPty & { __emitData: (d: string) => void; __emitExit: (code: number) => void };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     session = new QSession();
+    const listeners: { data?: (d: string) => void; exit?: (e: { exitCode: number }) => void } = {};
+    mockPty = {
+      onData: (cb: (d: string) => void) => { listeners.data = cb; },
+      onExit: (cb: (e: { exitCode: number }) => void) => { listeners.exit = cb; },
+      write: vi.fn(),
+      resize: vi.fn(),
+      kill: vi.fn(),
+      pid: 43210,
+      __emitData: (d: string) => listeners.data?.(d),
+      __emitExit: (code: number) => listeners.exit?.({ exitCode: code })
+    } as any;
     
-    // モックプロセスの作成
-    mockProcess = new EventEmitter();
-    mockProcess.stdin = {
-      write: vi.fn()
-    };
-    mockProcess.stdout = new EventEmitter();
-    mockProcess.stderr = new EventEmitter();
-    mockProcess.kill = vi.fn();
-    
-    vi.mocked(childProcess.spawn).mockReturnValue(mockProcess as any);
+    vi.mocked(pty.spawn).mockReturnValue(mockPty);
   });
 
   afterEach(() => {
@@ -35,12 +37,10 @@ describe('QSession', () => {
   it('セッションを開始できる', async () => {
     await session.start('chat');
     
-    expect(childProcess.spawn).toHaveBeenCalledWith(
+    expect(pty.spawn).toHaveBeenCalledWith(
       '/usr/local/bin/q',
       ['chat'],
-      expect.objectContaining({
-        stdio: ['pipe', 'pipe', 'pipe']
-      })
+      expect.objectContaining({ env: expect.any(Object) })
     );
     expect(session.running).toBe(true);
   });
@@ -51,24 +51,14 @@ describe('QSession', () => {
     await expect(session.start('chat')).rejects.toThrow('セッションは既に開始されています');
   });
 
-  it('標準出力からのデータをイベントとして発行する', async () => {
+  it('PTYのデータをイベントとして発行する', async () => {
     const dataHandler = vi.fn();
     session.on('data', dataHandler);
     
     await session.start('chat');
-    mockProcess.stdout.emit('data', Buffer.from('Hello from Q'));
+    mockPty.__emitData('Hello from Q');
     
     expect(dataHandler).toHaveBeenCalledWith('stdout', 'Hello from Q');
-  });
-
-  it('標準エラー出力からのデータをイベントとして発行する', async () => {
-    const dataHandler = vi.fn();
-    session.on('data', dataHandler);
-    
-    await session.start('chat');
-    mockProcess.stderr.emit('data', Buffer.from('Error message'));
-    
-    expect(dataHandler).toHaveBeenCalledWith('stderr', 'Error message');
   });
 
   it('セッションに入力を送信できる', async () => {
@@ -76,7 +66,7 @@ describe('QSession', () => {
     
     session.send('Hello Q');
     
-    expect(mockProcess.stdin.write).toHaveBeenCalledWith('Hello Q\n');
+    expect(mockPty.write).toHaveBeenCalledWith('Hello Q\r');
   });
 
   it('セッションが開始されていない場合、入力送信はエラーになる', () => {
@@ -88,7 +78,7 @@ describe('QSession', () => {
     
     session.stop();
     
-    expect(mockProcess.kill).toHaveBeenCalledWith('SIGTERM');
+    expect(mockPty.kill).toHaveBeenCalled();
     expect(session.running).toBe(false);
   });
 
@@ -97,21 +87,9 @@ describe('QSession', () => {
     session.on('exit', exitHandler);
     
     await session.start('chat');
-    mockProcess.emit('exit', 0);
+    mockPty.__emitExit(0);
     
     expect(exitHandler).toHaveBeenCalledWith(0);
-    expect(session.running).toBe(false);
-  });
-
-  it('プロセスエラーが発生したときにerrorイベントを発行する', async () => {
-    const errorHandler = vi.fn();
-    const error = new Error('Process error');
-    session.on('error', errorHandler);
-    
-    await session.start('chat');
-    mockProcess.emit('error', error);
-    
-    expect(errorHandler).toHaveBeenCalledWith(error);
     expect(session.running).toBe(false);
   });
 });

@@ -49,151 +49,55 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
     }
   }, [session, sessionStarted]);
 
-  // セッションからの出力を処理
+  // セッションからの出力を最小限の整形で処理（Thinkingの抑制 + CR進捗処理）
   useEffect(() => {
-    // バッファを保持するためのrefを使用
     const bufferRef = { current: '' };
-    
-    const handleData = (type: string, data: string) => {
-      // ANSIエスケープシーケンスを完全に削除
-      let cleanData = data;
-      
-      // すべてのANSIエスケープコードを段階的に削除
-      cleanData = cleanData
-        .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')    // 標準的なエスケープシーケンス
-        .replace(/\x1b\].*?\x07/g, '')             // OSCシーケンス
-        .replace(/\x1b[PX^_].*?\x1b\\/g, '')       // DCS/PM/APC/SOS シーケンス
-        .replace(/\x1b[78]/g, '')                  // 保存/復元カーソル
-        .replace(/\x1b[=>]/g, '')                  // アプリケーションキーパッドモード
-        .replace(/\x1b\([0-2]/g, '')               // 文字セット指定
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // 制御文字（改行・キャリッジリターン以外）
-        .replace(/\x7f/g, '');                     // DEL文字
-      
-      // ANSIカラーコードの残骸を削除（38;5;12mのような形式）
-      cleanData = cleanData
-        .replace(/\x1b?\[?38;5;\d+m/g, '')        // 256色前景色
-        .replace(/\x1b?\[?48;5;\d+m/g, '')        // 256色背景色
-        .replace(/\x1b?\[?\d+;\d+m/g, '')         // その他の色コード（エスケープが欠けている場合も対応）
-        .replace(/^[\x1b\[]*\d+;\d+m/gm, '');     // 行頭のエスケープコード残骸のみ削除
-      
-      // バッファに追加
-      let buffer = bufferRef.current + cleanData;
-      
-      // 処理する行のリスト
-      const linesToAdd: string[] = [];
-      let progressLine: string | null = null;
-      
-      // キャリッジリターン処理（プログレス表示用）
-      if (buffer.includes('\r')) {
-        const parts = buffer.split('\r');
-        const lastPart = parts[parts.length - 1];
-        
-        // プログレス表示のパターン
+
+    const handleData = (_type: string, data: string) => {
+      // CRLF正規化（ANSIや色は保持）
+      let merged = (bufferRef.current + data).replace(/\r\n/g, '\n');
+
+      // CR（キャリッジリターン）を利用した進捗行の更新
+      if (merged.includes('\r')) {
+        const crParts = merged.split('\r');
+        const lastPart = crParts[crParts.length - 1];
         const progressPatterns = [
-          /⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏/,  // スピナー文字
-          /Thinking\.\.\./,               // Thinking...
-          /Loading\.\.\./,                // Loading...
-          /Processing\.\.\./              // Processing...
+          /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏].*\.{3}/, // スピナー + ...
+          /Loading\.\.\./,
+          /Processing\.\.\./,
+          /Downloading|Uploading|Indexing/i
         ];
-        
-        // プログレス表示かチェック
-        const isProgress = progressPatterns.some(pattern => pattern.test(lastPart));
-        
-        if (isProgress) {
-          // プログレス表示として処理
-          progressLine = lastPart.replace(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏0-9]+/, match => {
-            return match.replace(/[0-9]+/, '');
-          }).trim();
-          
-          if (progressLine) {
-            setCurrentProgressLine(progressLine);
-          }
-          
-          bufferRef.current = '';
-          return;
-        } else {
-          // 最後の部分だけを処理対象に
-          buffer = lastPart;
+        if (progressPatterns.some(p => p.test(lastPart))) {
+          setCurrentProgressLine(lastPart.trim());
         }
+        // 最新内容のみを対象にして以降の処理を行う
+        merged = lastPart;
       }
-      
-      // 改行があるかチェック
-      if (buffer.includes('\n')) {
-        // 改行で分割
-        const lines = buffer.split('\n');
-        
-        // 最後の行が不完全な可能性があるため、改行で終わっていない場合は保持
-        let incompleteBuffer = '';
-        if (!cleanData.endsWith('\n')) {
-          incompleteBuffer = lines.pop() || '';
-        }
-        
-        // 各行を処理
-        for (const line of lines) {
-          let trimmedLine = line.trim();
-          
-          // 残っている可能性のあるエスケープコードを削除
-          trimmedLine = trimmedLine
-            .replace(/^\[?\d+;\d+m/g, '')
-            .replace(/38;5;\d+m/g, '')
-            .replace(/48;5;\d+m/g, '')
-            .replace(/\d+;\d+m/g, '')
-            .replace(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s*/, '')
-            .replace(/^;+\s*/, '')
-            .trim();
-          
-          // 空行、プログレス行、Thinking行をスキップ
-          if (!trimmedLine) continue;
-          if (trimmedLine.match(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]/)) continue;
-          if (trimmedLine === 'Thinking...' || trimmedLine.includes('Thinking...')) continue;
-          
-          linesToAdd.push(trimmedLine);
-        }
-        
-        // バッファを更新
-        bufferRef.current = incompleteBuffer;
-      } else {
-        // 改行がない場合、すべてをバッファに保持
-        // ただし、文の終わりを検出したら出力する
-        const sentenceEndPatterns = [
-          /[.!?]\s*$/,     // 文末記号
-          /:\s*$/,         // コロン
-          /commands$/,     // 特定のキーワード（「/help all commands」など）
-          /initialized\.?$/,  // 初期化メッセージ
-          /Q!$/,           // Welcome to Amazon Q!
-        ];
-        
-        // バッファが大きくなりすぎた場合、または文末パターンに一致する場合
-        if (buffer.length > 80 || sentenceEndPatterns.some(pattern => pattern.test(buffer.trim()))) {
-          const trimmedBuffer = buffer.trim()
-            .replace(/^\[?\d+;\d+m/g, '')
-            .replace(/38;5;\d+m/g, '')
-            .replace(/48;5;\d+m/g, '')
-            .replace(/\d+;\d+m/g, '')
-            .replace(/^;+\s*/, '')
-            .trim();
-          
-          if (trimmedBuffer && 
-              !trimmedBuffer.match(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]/) && 
-              trimmedBuffer !== 'Thinking...' && 
-              !trimmedBuffer.includes('Thinking...')) {
-            linesToAdd.push(trimmedBuffer);
-            bufferRef.current = '';
-          } else {
-            bufferRef.current = buffer;
-          }
-        } else {
-          bufferRef.current = buffer;
-        }
-      }
-      
-      // 新しい行がある場合のみ出力を更新
-      if (linesToAdd.length > 0) {
-        setOutputLines(prev => [...prev, ...linesToAdd]);
+
+      const parts = merged.split('\n');
+      const incomplete = parts.pop() || '';
+      const linesToAdd: string[] = [];
+
+      // 改行が来たタイミングで、進捗行が存在すれば1回だけ履歴に残す
+      if (parts.length > 0 && currentProgressLine) {
+        linesToAdd.push(currentProgressLine);
         setCurrentProgressLine(null);
       }
+
+      for (const line of parts) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        // Thinking... 系の行は抑制
+        if (trimmed === 'Thinking...' || trimmed.includes('Thinking...')) continue;
+        linesToAdd.push(line);
+      }
+
+      bufferRef.current = incomplete;
+      if (linesToAdd.length > 0) {
+        setOutputLines(prev => [...prev, ...linesToAdd]);
+      }
     };
-    
+
     const handleExit = (code: number) => {
       setStatus('ready');
       setMode('command');
