@@ -17,6 +17,8 @@ let globalMockSession: MockQSession | null = null;
 
 // QSessionモジュールをモック
 vi.mock("../lib/q-session", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { EventEmitter } = require("events");
   // MockQSessionクラスをvi.mockの中で定義
   class MockQSession extends EventEmitter {
     running = false;
