@@ -170,6 +170,9 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
     history.add(command);
     history.resetPosition();
 
+    // ユーザー入力を履歴に表示（枠組み付きで表示されるようにプレフィックスを付ける）
+    setOutputLines((prev) => [...prev, `USER_INPUT:${command}`]);
+
     // 入力欄をクリアし、実行中コマンドを記録
     setInputValue("");
     setCurrentCommand(command);

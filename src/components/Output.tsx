@@ -17,6 +17,9 @@ export const Output: React.FC<OutputProps> = ({ lines, height }) => {
       ? lines.slice(-height)
       : lines;
 
+  // ユーザー入力メッセージかどうかを判定
+  const isUserMessage = (line: string) => line.startsWith("USER_INPUT:");
+
   return (
     <Box
       flexDirection="column"
@@ -30,9 +33,28 @@ export const Output: React.FC<OutputProps> = ({ lines, height }) => {
           Waiting for output...
         </Text>
       ) : (
-        displayLines.map((line, index) => (
-          <Text key={`${index}-${line.substring(0, 20)}`}>{line}</Text>
-        ))
+        displayLines.map((line, index) => {
+          if (isUserMessage(line)) {
+            // ユーザー入力は枠組み付きで表示
+            const message = line.replace("USER_INPUT:", "").trim();
+            return (
+              <Box
+                key={`${index}-${line.substring(0, 20)}`}
+                borderStyle="single"
+                borderColor="cyan"
+                paddingX={1}
+                marginBottom={1}
+              >
+                <Text color="cyan">▶ {message}</Text>
+              </Box>
+            );
+          } else {
+            // 通常の出力
+            return (
+              <Text key={`${index}-${line.substring(0, 20)}`}>{line}</Text>
+            );
+          }
+        })
       )}
     </Box>
   );
