@@ -6,9 +6,9 @@ import { Input } from './Input.js';
 import { StatusBar } from './StatusBar.js';
 import { CommandHistory } from '../lib/history.js';
 import { QSession } from '../lib/q-session.js';
-import { spawnQ } from '../lib/spawn-q.js';
 import { StreamProcessor } from '../lib/stream-processor.js';
 import { KeyboardHandler } from '../lib/keyboard-handler.js';
+import { CommandExecutor } from '../lib/command-executor.js';
 
 interface AppProps {
   version?: string;
@@ -88,6 +88,23 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
     };
   }, [session, streamProcessor]);
   
+  // コマンド実行エンジンの初期化
+  const [commandExecutor] = useState(() => new CommandExecutor(session, {
+    onModeChange: setMode,
+    onStatusChange: setStatus,
+    onOutput: (lines) => {
+      if (typeof lines === 'string') {
+        setOutputLines(prev => [...prev, lines]);
+      } else {
+        setOutputLines(prev => [...prev, ...lines]);
+      }
+    },
+    onError: (message) => {
+      setOutputLines(prev => [...prev, `❌ Error: ${message}`]);
+      setErrorCount(prev => prev + 1);
+    }
+  }));
+  
   // キーボードハンドラーの初期化
   const [keyboardHandler] = useState(() => new KeyboardHandler({
     onExit: () => {
@@ -134,40 +151,12 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
     history.add(command);
     history.resetPosition();
     
-    // 出力に追加（プロンプトにアイコンを追加）
-    setOutputLines(prev => [...prev, `💬 ${command}`]);
+    // 入力欄をクリアし、実行中コマンドを記録
     setInputValue('');
     setCurrentCommand(command);
-    setStatus('running');
     
-    try {
-      // セッションモードのコマンドか判定
-      if (command.startsWith('q chat') || command.startsWith('q translate')) {
-        // セッションモードに切り替え
-        setMode('session');
-        const sessionType = command.split(' ')[1];
-        await session.start(sessionType);
-      } else if (mode === 'session' && session.running) {
-        // セッションに入力を送信
-        session.send(command);
-      } else {
-        // 通常のコマンド実行
-        const result = await spawnQ(command.replace(/^q\s+/, '').split(' '));
-        if (result.stdout) {
-          setOutputLines(prev => [...prev, ...result.stdout.split('\n').filter(Boolean)]);
-        }
-        setStatus(result.exitCode === 0 ? 'ready' : 'error');
-      }
-    } catch (error) {
-      setOutputLines(prev => [...prev, `Error: ${error instanceof Error ? error.message : String(error)}`]);
-      setStatus('error');
-      setErrorCount(prev => prev + 1);
-    } finally {
-      if (!session.running) {
-        setCurrentCommand(undefined);
-        setStatus('ready');
-      }
-    }
+    // 実行は CommandExecutor に委譲
+    await commandExecutor.execute(command, mode);
   };
   
   return (

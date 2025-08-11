@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { CommandHistory } from './history.js';
+import { CommandHistory } from '../lib/history.js';
 
 describe('CommandHistory', () => {
   let history: CommandHistory;

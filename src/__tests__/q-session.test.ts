@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { QSession } from './q-session.js';
+import { QSession } from '../lib/q-session.js';
 import * as pty from 'node-pty';
 import type { IPty } from 'node-pty';
 
 // モックの設定
 vi.mock('node-pty');
-vi.mock('./q-cli-detector.ts', () => ({
+vi.mock('../lib/q-cli-detector.ts', () => ({
   detectQCLI: vi.fn().mockResolvedValue('/usr/local/bin/q')
 }));
 
