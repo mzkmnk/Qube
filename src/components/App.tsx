@@ -192,16 +192,9 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
       } else {
         // 通常のコマンド実行
         const result = await spawnQ(command.replace(/^q\s+/, '').split(' '));
-        
         if (result.stdout) {
-          setOutputLines(prev => [...prev, ...result.stdout.split('\n').filter(line => line)]);
+          setOutputLines(prev => [...prev, ...result.stdout.split('\n').filter(Boolean)]);
         }
-        
-        if (result.stderr) {
-          setOutputLines(prev => [...prev, ...result.stderr.split('\n').filter(line => line)]);
-          setErrorCount(prev => prev + 1);
-        }
-        
         setStatus(result.exitCode === 0 ? 'ready' : 'error');
       }
     } catch (error) {

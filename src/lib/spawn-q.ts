@@ -9,14 +9,12 @@ export interface SpawnQOptions {
   /** 作業ディレクトリ */
   cwd?: string
   /** ストリーミングデータのコールバック */
-  onData?: (type: 'stdout' | 'stderr', data: string) => void
+  onData?: (data: string) => void
 }
 
 export interface SpawnQResult {
-  /** 標準出力 */
+  /** 出力（TTY統合） */
   stdout: string
-  /** 標準エラー出力 */
-  stderr: string
   /** 終了コード */
   exitCode: number | null
 }
@@ -49,7 +47,6 @@ export async function spawnQ(
     }
     
     let stdout = ''
-    let stderr = ''
     let timeoutId: NodeJS.Timeout | undefined
     let isResolved = false
 
@@ -57,7 +54,7 @@ export async function spawnQ(
     if (options.timeout) {
       timeoutId = setTimeout(() => {
         if (!isResolved) {
-          child.kill('SIGTERM')
+          child.kill()
           isResolved = true
           reject(new Error(`コマンドがタイムアウトしました (${options.timeout! / 1000}秒)`))
         }
@@ -67,7 +64,7 @@ export async function spawnQ(
     // PTYのデータは統合ストリーム
     child.onData((data) => {
       stdout += data
-      options.onData?.('stdout', data)
+      options.onData?.(data)
     })
 
     // プロセス終了の処理
@@ -75,7 +72,7 @@ export async function spawnQ(
       if (!isResolved) {
         if (timeoutId) clearTimeout(timeoutId)
         isResolved = true
-        resolve({ stdout, stderr, exitCode })
+        resolve({ stdout, exitCode })
       }
     })
   })

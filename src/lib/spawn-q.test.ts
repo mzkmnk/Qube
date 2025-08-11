@@ -61,7 +61,6 @@ describe('spawnQ関数', () => {
 
     // Assert
     expect(result.stdout).toBe('Amazon Q CLI Help\nVersion: 1.0.0\n')
-    expect(result.stderr).toBe('')
     expect(result.exitCode).toBe(0)
     expect(mockSpawn).toHaveBeenCalledWith(
       '/usr/local/bin/amazonq',
@@ -92,7 +91,6 @@ describe('spawnQ関数', () => {
 
     // Assert
     expect(result.stdout).toBe('Error: Unknown command\n')
-    expect(result.stderr).toBe('')
     expect(result.exitCode).toBe(1)
   })
 
@@ -136,15 +134,10 @@ describe('spawnQ関数', () => {
     vi.mocked(pty.spawn).mockImplementation(mockSpawn)
 
     const stdoutChunks: string[] = []
-    const stderrChunks: string[] = []
 
     const options: SpawnQOptions = {
-      onData: (type, data) => {
-        if (type === 'stdout') {
-          stdoutChunks.push(data)
-        } else {
-          stderrChunks.push(data)
-        }
+      onData: (data) => {
+        stdoutChunks.push(data)
       }
     }
 
@@ -164,7 +157,6 @@ describe('spawnQ関数', () => {
 
     // Assert
     expect(stdoutChunks).toEqual(['chunk1', 'chunk2', 'error1'])
-    expect(stderrChunks).toEqual([])
   })
 
   it('環境変数を渡すことができる', async () => {

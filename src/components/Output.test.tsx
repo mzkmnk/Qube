@@ -32,15 +32,7 @@ describe('Output コンポーネント', () => {
     expect(output?.split('\n').length).toBeLessThanOrEqual(5); // 3 for content + 2 for borders
   });
 
-  it('スクロール位置を指定できる', () => {
-    const lines = Array.from({ length: 10 }, (_, i) => `Line ${i + 1}`);
-    const { lastFrame } = render(<Output lines={lines} height={3} scrollOffset={5} />);
-
-    const output = lastFrame();
-    // This is hard to test precisely with ink-testing-library,
-    // but we can at least confirm it renders without crashing.
-    expect(output).toBeDefined();
-  });
+  // scrollOffset は廃止（YAGNI）
 
   it('ANSIカラーコードを含む行をそのまま表示する', () => {
     const lines = ['\u001b[32mGreen text\u001b[0m'];

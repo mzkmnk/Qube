@@ -4,10 +4,9 @@ import { Box, Text } from 'ink';
 interface OutputProps {
   lines: string[];
   height?: number;
-  scrollOffset?: number;
 }
 
-export const Output: React.FC<OutputProps> = ({ lines, height, scrollOffset = 0 }) => {
+export const Output: React.FC<OutputProps> = ({ lines, height }) => {
   // 表示する行を決定（最新の行を優先表示）
   let displayLines = lines;
 
