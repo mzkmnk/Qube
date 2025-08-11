@@ -1,13 +1,13 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { App } from '../App.js';
+import { App } from '../components/App.js';
 
 // グローバルなモックセッションインスタンス
 let mockSessionInstance: any;
 
 // QSessionのモック
-vi.mock('../../lib/q-session.js', () => ({
+vi.mock('../lib/q-session.js', () => ({
   QSession: vi.fn().mockImplementation(() => {
     if (!mockSessionInstance) {
       mockSessionInstance = {
@@ -24,12 +24,12 @@ vi.mock('../../lib/q-session.js', () => ({
 }));
 
 // Q CLI detectorのモック
-vi.mock('../../lib/q-cli-detector.js', () => ({
+vi.mock('../lib/q-cli-detector.js', () => ({
   detectQCLI: vi.fn().mockResolvedValue('/usr/local/bin/q')
 }));
 
 // spawnQのモック（Appコンポーネントが使用する場合）
-vi.mock('../../lib/spawn-q.js', () => ({
+vi.mock('../lib/spawn-q.js', () => ({
   spawnQ: vi.fn().mockResolvedValue({
     stdout: '',
     stderr: '',

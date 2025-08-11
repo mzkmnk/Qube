@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
-import { Input } from '../Input.js';
+import { Input } from '../components/Input.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('Input component', () => {
@@ -18,7 +18,6 @@ describe('Input component', () => {
     
     const { stdin } = render(
       <Input 
-        prompt=">"
         value=""
         onChange={onChange}
         onSubmit={onSubmit}
@@ -59,7 +58,6 @@ describe('Input component', () => {
     
     const { stdin } = render(
       <Input 
-        prompt=">"
         value=""
         onChange={onChange}
         onSubmit={onSubmit}
@@ -84,7 +82,6 @@ describe('Input component', () => {
     
     const { stdin } = render(
       <Input 
-        prompt=">"
         value={testValue}
         onChange={onChange}
         onSubmit={onSubmit}
