@@ -1,5 +1,5 @@
 import pty, { type IPty } from 'node-pty'
-import { detectQCLI } from './q-cli-detector.ts'
+import { detectQCLI } from './q-cli-detector'
 
 export interface SpawnQOptions {
   /** タイムアウト（ミリ秒） */

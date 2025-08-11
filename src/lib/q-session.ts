@@ -1,6 +1,6 @@
 import pty, { type IPty } from 'node-pty'
 import { EventEmitter } from 'node:events'
-import { detectQCLI } from './q-cli-detector.ts'
+import { detectQCLI } from './q-cli-detector'
 
 /**
  * Q CLIの永続的セッションを管理するクラス

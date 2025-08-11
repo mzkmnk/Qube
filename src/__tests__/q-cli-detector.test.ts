@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { detectQCLI } from '../lib/q-cli-detector.ts'
+import { detectQCLI } from '../lib/q-cli-detector'
 import child_process from 'node:child_process'
 import { promisify } from 'node:util'
 

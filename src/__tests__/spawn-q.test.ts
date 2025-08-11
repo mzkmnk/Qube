@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { spawnQ, type SpawnQOptions } from '../lib/spawn-q.ts'
-import * as qCliDetector from '../lib/q-cli-detector.ts'
+import { spawnQ, type SpawnQOptions } from '../lib/spawn-q'
+import * as qCliDetector from '../lib/q-cli-detector'
 import * as pty from 'node-pty'
 import type { IPty } from 'node-pty'
 
-vi.mock('../lib/q-cli-detector.ts')
+vi.mock('../lib/q-cli-detector')
 vi.mock('node-pty')
 
 describe('spawnQ関数', () => {
