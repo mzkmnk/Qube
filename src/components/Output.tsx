@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text } from 'ink';
 
 interface OutputProps {
@@ -7,8 +7,141 @@ interface OutputProps {
   scrollOffset?: number;
 }
 
+// 差分ペアを表現する型
+interface DiffPair {
+  lineNum: number;
+  oldContent?: string;
+  newContent?: string;
+  isUnchanged?: boolean;
+}
+
+// 文字列を指定幅で切り詰める
+const truncateString = (str: string, maxWidth: number): string => {
+  if (str.length <= maxWidth) {
+    return str.padEnd(maxWidth, ' ');
+  }
+  return str.substring(0, maxWidth - 2) + '..';
+};
+
+// 差分行のバッファから左右並列表示用のペアを生成
+const createDiffPairs = (diffLines: string[]): DiffPair[] => {
+  const pairs: Map<number, DiffPair> = new Map();
+  
+  diffLines.forEach(line => {
+    // 変更なし行（oldNum, newNum: code）
+    const unchangedMatch = line.match(/^\s*(\d+),\s*\d+:\s*(.*)$/);
+    if (unchangedMatch) {
+      const lineNum = parseInt(unchangedMatch[1]);
+      pairs.set(lineNum, {
+        lineNum,
+        oldContent: unchangedMatch[2],
+        newContent: unchangedMatch[2],
+        isUnchanged: true
+      });
+      return;
+    }
+    
+    // 削除行（• num : code）
+    const removedMatch = line.match(/^\s*•\s*(\d+)\s*:\s*(.*)$/);
+    if (removedMatch) {
+      const lineNum = parseInt(removedMatch[1]);
+      const existing = pairs.get(lineNum) || { lineNum };
+      existing.oldContent = removedMatch[2];
+      pairs.set(lineNum, existing);
+      return;
+    }
+    
+    // 追加行（+ num: code）
+    const addedMatch = line.match(/^\s*\+\s*(\d+):\s*(.*)$/);
+    if (addedMatch) {
+      const lineNum = parseInt(addedMatch[1]);
+      const existing = pairs.get(lineNum) || { lineNum };
+      existing.newContent = addedMatch[2];
+      pairs.set(lineNum, existing);
+      return;
+    }
+  });
+  
+  return Array.from(pairs.values()).sort((a, b) => a.lineNum - b.lineNum);
+};
+
+// 左右並列diff表示をレンダリング
+const renderSideBySideDiff = (diffLines: string[]): React.ReactNode => {
+  const pairs = createDiffPairs(diffLines);
+  if (pairs.length === 0) return null;
+  
+  // ターミナル幅を取得して列幅を計算
+  const terminalWidth = process.stdout.columns || 120;
+  const columnWidth = Math.floor((terminalWidth - 10) / 2); // 左右の列幅
+  
+  return (
+    <Box flexDirection="column" marginY={1}>
+      {/* 上部の境界線 */}
+      <Box>
+        <Text color="gray">{'━'.repeat(Math.min(terminalWidth - 2, 80))}</Text>
+      </Box>
+      
+      {/* 差分行 */}
+      {pairs.map((pair, index) => {
+        const lineNumStr = pair.lineNum.toString().padStart(2, ' ');
+        const oldContent = pair.oldContent || '';
+        const newContent = pair.newContent || '';
+        
+        if (pair.isUnchanged) {
+          // 変更なし行
+          return (
+            <Box key={index}>
+              <Box width={columnWidth}>
+                <Text color="gray">{lineNumStr}│ </Text>
+                <Text color="gray" dimColor>{truncateString(oldContent, columnWidth - 4)}</Text>
+              </Box>
+              <Text color="gray"> │ </Text>
+              <Box width={columnWidth}>
+                <Text color="gray">{lineNumStr}│ </Text>
+                <Text color="gray" dimColor>{truncateString(newContent, columnWidth - 4)}</Text>
+              </Box>
+            </Box>
+          );
+        } else {
+          // 変更あり行
+          return (
+            <Box key={index}>
+              <Box width={columnWidth}>
+                {oldContent ? (
+                  <>
+                    <Text color="red" bold>{lineNumStr}│ </Text>
+                    <Text color="red">{truncateString(oldContent, columnWidth - 4)}</Text>
+                  </>
+                ) : (
+                  <Text>{' '.repeat(columnWidth)}</Text>
+                )}
+              </Box>
+              <Text color="gray"> │ </Text>
+              <Box width={columnWidth}>
+                {newContent ? (
+                  <>
+                    <Text color="green" bold>{lineNumStr}│ </Text>
+                    <Text color="green">{truncateString(newContent, columnWidth - 4)}</Text>
+                  </>
+                ) : (
+                  <Text>{' '.repeat(columnWidth)}</Text>
+                )}
+              </Box>
+            </Box>
+          );
+        }
+      })}
+      
+      {/* フッター */}
+      <Box>
+        <Text color="gray">{'━'.repeat(Math.min(terminalWidth - 2, 80))}</Text>
+      </Box>
+    </Box>
+  );
+};
+
 // コードブロックやマークダウンの検出とスタイリング
-const formatLine = (line: string, isInCodeBlock = false): React.ReactNode => {
+const formatLine = (line: string, isInCodeBlock = false, isDiffLine = false): React.ReactNode | 'DIFF_LINE' => {
   // 汎用的なANSIエスケープシーケンスの除去（最初に処理）
   let cleanedLine = line;
   
@@ -150,85 +283,41 @@ const formatLine = (line: string, isInCodeBlock = false): React.ReactNode => {
     return null; // 表示しない
   }
   
-  // GitHub Diff風: 改善された差分表示（コンパクト版）
-  // Amazon Q CLIの複雑なパターンを統一された見やすい形式に変換
+  // GitHub Diff風: 差分表示の検出
+  // Amazon Q CLIの複雑なパターンを検出して、左右並列表示のフラグを返す
   
   // パターン1: 変更なしの行（oldNum, newNum: code）
   const unchangedMatch = line.match(/^\s*(\d+),\s*(\d+):\s*(.*)$/);
   if (unchangedMatch) {
-    const lineNum = unchangedMatch[2].padStart(4, ' ');
-    const code = unchangedMatch[3];
-    
-    return (
-      <Box>
-        <Text color="gray">{lineNum} │ </Text>
-        <Text>{code}</Text>
-      </Box>
-    );
+    return 'DIFF_LINE';
   }
   
   // パターン2: 削除行（• num : code）
   const removedMatch = line.match(/^\s*•\s*(\d+)\s*:\s*(.*)$/);
   if (removedMatch) {
-    const lineNum = removedMatch[1].padStart(2, ' ');
-    const code = removedMatch[2];
-    
-    return (
-      <Box>
-        <Text color="red" bold> -{lineNum} │ </Text>
-        <Text color="red" dimColor>{code}</Text>
-      </Box>
-    );
+    return 'DIFF_LINE';
   }
   
   // パターン3: 追加行（+ num: code）
   const addedMatch = line.match(/^\s*\+\s*(\d+):\s*(.*)$/);
   if (addedMatch) {
-    const lineNum = addedMatch[1].padStart(2, ' ');
-    const code = addedMatch[2];
-    
-    return (
-      <Box>
-        <Text color="green" bold> +{lineNum} │ </Text>
-        <Text color="green">{code}</Text>
-      </Box>
-    );
+    return 'DIFF_LINE';
   }
   
   // パターン4: Amazon Q CLIの別形式（- lineNum : code）形式の削除行
   const altRemoveMatch = line.match(/^\s*-\s*(\d+)\s*:\s*(.*)$/);
   if (altRemoveMatch) {
-    const lineNum = altRemoveMatch[1].padStart(2, ' ');
-    const code = altRemoveMatch[2];
-    
-    return (
-      <Box>
-        <Text color="red" bold> -{lineNum} │ </Text>
-        <Text color="red" dimColor>{code}</Text>
-      </Box>
-    );
+    return 'DIFF_LINE';
   }
   
   // パターン5: 単純な追加行（行番号なし、+ で始まる）
   if (line.trim().startsWith('+') && !line.match(/^\s*\+\s*\d+:/)) {
-    const content = line.replace(/^\s*\+\s*/, '');
-    return (
-      <Box>
-        <Text color="green" bold>  +   │ </Text>
-        <Text color="green">{content}</Text>
-      </Box>
-    );
+    return 'DIFF_LINE';
   }
   
   // パターン6: 単純な削除行（行番号なし、- で始まる）
   if (line.trim().startsWith('-') && !line.match(/^\s*-\s*\d+:/) && !line.match(/^---+|^--$/)) {
-    const content = line.replace(/^\s*-\s*/, '');
-    return (
-      <Box>
-        <Text color="red" bold>  -   │ </Text>
-        <Text color="red" dimColor>{content}</Text>
-      </Box>
-    );
+    return 'DIFF_LINE';
   }
   
   // ファイル目的表示（↳ Purpose:）
@@ -540,17 +629,73 @@ export const Output: React.FC<OutputProps> = ({ lines, height, scrollOffset = 0 
     }
   }
 
-  // コードブロックの状態を追跡
+  // コードブロックの状態と差分バッファを追跡
   let isInCodeBlock = false;
-  const processedLines = displayLines.map((line, index) => {
+  let diffBuffer: string[] = [];
+  const processedElements: React.ReactNode[] = [];
+  
+  displayLines.forEach((line, index) => {
     // コードブロックの開始・終了を検出
     if (line.trim().startsWith('```')) {
       isInCodeBlock = !isInCodeBlock;
-      return { line, index, isCodeBlockMarker: true, isInCodeBlock: false };
+      
+      // 差分バッファがある場合は左右並列表示を生成
+      if (diffBuffer.length > 0) {
+        processedElements.push(
+          <Box key={`diff-${index}`}>
+            {renderSideBySideDiff(diffBuffer)}
+          </Box>
+        );
+        diffBuffer = [];
+      }
+      
+      const language = line.substring(3).trim();
+      processedElements.push(
+        <Box key={`code-${index}`} marginY={1} paddingX={1}>
+          <Text color="black" backgroundColor="yellowBright">
+            {language ? `▼ ${language}` : '▼ Code'}
+          </Text>
+        </Box>
+      );
+      return;
     }
     
-    return { line, index, isCodeBlockMarker: false, isInCodeBlock };
+    const formattedLine = formatLine(line, isInCodeBlock, false);
+    
+    // 差分行の場合はバッファに追加
+    if (formattedLine === 'DIFF_LINE') {
+      diffBuffer.push(line);
+      return;
+    }
+    
+    // 差分行以外が来たら、バッファをフラッシュ
+    if (diffBuffer.length > 0) {
+      processedElements.push(
+        <Box key={`diff-${index}`}>
+          {renderSideBySideDiff(diffBuffer)}
+        </Box>
+      );
+      diffBuffer = [];
+    }
+    
+    // nullが返された場合は表示しない
+    if (formattedLine !== null) {
+      processedElements.push(
+        <Box key={`${index}-${line.substring(0, 10)}`}>
+          {formattedLine}
+        </Box>
+      );
+    }
   });
+  
+  // 最後に残った差分バッファを処理
+  if (diffBuffer.length > 0) {
+    processedElements.push(
+      <Box key="diff-final">
+        {renderSideBySideDiff(diffBuffer)}
+      </Box>
+    );
+  }
 
   return (
     <Box 
@@ -562,21 +707,10 @@ export const Output: React.FC<OutputProps> = ({ lines, height, scrollOffset = 0 
       paddingX={1}
       paddingY={0}
     >
-      {processedLines.length === 0 ? (
+      {processedElements.length === 0 ? (
         <Text color="gray" dimColor>Waiting for output...</Text>
       ) : (
-        processedLines.map((lineInfo, index) => {
-          const formattedLine = formatLine(lineInfo.line, lineInfo.isInCodeBlock);
-          // nullが返された場合は表示しない
-          if (formattedLine === null) {
-            return null;
-          }
-          return (
-            <Box key={`${index}-${lineInfo.line.substring(0, 10)}`}>
-              {formattedLine}
-            </Box>
-          );
-        }).filter(Boolean) // nullを除外
+        processedElements
       )}
     </Box>
   );
