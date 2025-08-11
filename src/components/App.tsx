@@ -8,6 +8,7 @@ import { CommandHistory } from '../lib/history.js';
 import { QSession } from '../lib/q-session.js';
 import { spawnQ } from '../lib/spawn-q.js';
 import { StreamProcessor } from '../lib/stream-processor.js';
+import { KeyboardHandler } from '../lib/keyboard-handler.js';
 
 interface AppProps {
   version?: string;
@@ -87,46 +88,42 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
     };
   }, [session, streamProcessor]);
   
-  // キーバインドの処理
-  useInput((input, key) => {
-    // Ctrl+D: 終了
-    if (key.ctrl && input === 'd') {
+  // キーボードハンドラーの初期化
+  const [keyboardHandler] = useState(() => new KeyboardHandler({
+    onExit: () => {
       if (session.running) {
         session.stop();
       }
       exit();
       process.exit(0);
-    }
-    
-    // Ctrl+C: 現在の処理を中断
-    if (key.ctrl && input === 'c') {
+    },
+    onInterrupt: () => {
       if (session.running) {
         session.stop();
         setStatus('ready');
         setMode('command');
       }
-    }
-    
-    // Ctrl+L: クリア
-    if (key.ctrl && input === 'l') {
+    },
+    onClear: () => {
       setOutputLines([]);
       setErrorCount(0);
       streamProcessor.clear();
-    }
-    
-    // 上矢印: 履歴を遡る
-    if (key.upArrow) {
+    },
+    onHistoryUp: () => {
       const prev = history.getPrevious();
       if (prev) {
         setInputValue(prev);
       }
-    }
-    
-    // 下矢印: 履歴を進める
-    if (key.downArrow) {
+    },
+    onHistoryDown: () => {
       const next = history.getNext();
       setInputValue(next);
     }
+  }));
+  
+  // キーバインドの処理
+  useInput((input, key) => {
+    keyboardHandler.handleInput(input, key);
   });
   
   // コマンド実行
