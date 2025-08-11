@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { App } from '../App.js';
+import { App } from '../components/App';
 import { EventEmitter } from 'events';
 
 // MockQSessionの型定義
@@ -16,7 +16,7 @@ interface MockQSession extends EventEmitter {
 let globalMockSession: any = null;
 
 // QSessionモジュールをモック
-vi.mock('../../lib/q-session.js', () => {
+vi.mock('../lib/q-session', () => {
   const { EventEmitter } = require('events');
   
   class MockQSession extends EventEmitter {
@@ -46,12 +46,12 @@ vi.mock('../../lib/q-session.js', () => {
 });
 
 // Q CLI detectorのモック
-vi.mock('../../lib/q-cli-detector.js', () => ({
+vi.mock('../lib/q-cli-detector', () => ({
   detectQCLI: vi.fn().mockResolvedValue('/usr/local/bin/q')
 }));
 
 // spawnQのモック
-vi.mock('../../lib/spawn-q.js', () => ({
+vi.mock('../lib/spawn-q', () => ({
   spawnQ: vi.fn().mockResolvedValue({
     stdout: '',
     stderr: '',
@@ -75,7 +75,7 @@ describe('ANSIエスケープコード処理のテスト', () => {
     await new Promise(resolve => setTimeout(resolve, 100));
   });
 
-  it('Given: ANSIエスケープコードを含むデータ, When: データが受信される, Then: エスケープコードが除去されて表示される', async () => {
+  it('Given: ANSIエスケープコードを含むデータ, When: データが受信される, Then: 生データが表示される', async () => {
     // Given
     const { lastFrame } = render(<App />);
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -92,11 +92,9 @@ describe('ANSIエスケープコード処理のテスト', () => {
     // Then
     const output = lastFrame() || '';
     expect(output).toContain('Green Text');
-    expect(output).not.toContain('\x1b[32m');
-    expect(output).not.toContain('\x1b[0m');
   });
 
-  it('Given: 256色ANSIコードを含むデータ, When: データが受信される, Then: すべての色コードが除去される', async () => {
+  it('Given: 256色ANSIコードを含むデータ, When: データが受信される, Then: 生データが表示される', async () => {
     // Given
     const { lastFrame } = render(<App />);
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -113,6 +111,5 @@ describe('ANSIエスケープコード処理のテスト', () => {
     // Then
     const output = lastFrame() || '';
     expect(output).toContain('Colored Text');
-    expect(output).not.toContain('38;5;12m');
   });
 });

@@ -1,14 +1,13 @@
-import { spawn, type ChildProcess } from 'node:child_process'
+import pty, { type IPty } from 'node-pty'
 import { EventEmitter } from 'node:events'
-import { detectQCLI } from './q-cli-detector.ts'
-import { Readable, Writable } from 'node:stream'
+import { detectQCLI } from './q-cli-detector'
 
 /**
  * Q CLIの永続的セッションを管理するクラス
  * chatモードのようなインタラクティブセッションに対応
  */
 export class QSession extends EventEmitter {
-  private process: ChildProcess | null = null
+  private process: IPty | null = null
   private isRunning = false
   
   /**
@@ -23,34 +22,27 @@ export class QSession extends EventEmitter {
     const qPath = await detectQCLI()
     
     // Q CLIをインタラクティブモードで起動
-    this.process = spawn(qPath, [mode], {
-      stdio: ['pipe', 'pipe', 'pipe'],
+    this.process = pty.spawn(qPath, [mode], {
+      name: 'xterm-color',
+      cols: 80,
+      rows: 30,
       env: process.env
     })
     
     this.isRunning = true
     
-    // 標準出力の処理
-    this.process.stdout?.on('data', (chunk) => {
-      this.emit('data', 'stdout', chunk.toString())
-    })
-    
-    // 標準エラー出力の処理
-    this.process.stderr?.on('data', (chunk) => {
-      this.emit('data', 'stderr', chunk.toString())
+    // PTYの出力（stdout相当のみ。stderrは統合）
+    this.process.onData((chunk) => {
+      this.emit('data', 'stdout', chunk)
     })
     
     // プロセス終了の処理
-    this.process.on('exit', (code) => {
+    this.process.onExit(({ exitCode: code }) => {
       this.isRunning = false
       this.emit('exit', code)
     })
     
-    // エラーの処理
-    this.process.on('error', (error) => {
-      this.isRunning = false
-      this.emit('error', error)
-    })
+    // node-ptyは生成時に例外を投げるため、ここでのエラーイベントは無し
   }
   
   /**
@@ -58,12 +50,12 @@ export class QSession extends EventEmitter {
    * @param input 送信するテキスト
    */
   send(input: string): void {
-    if (!this.isRunning || !this.process?.stdin) {
+    if (!this.isRunning || !this.process) {
       throw new Error('セッションが開始されていません')
     }
     
-    // 改行を追加して送信
-    this.process.stdin.write(input + '\n')
+    // Enter相当のCRを送信
+    this.process.write(input + '\r')
   }
   
   /**
@@ -71,7 +63,7 @@ export class QSession extends EventEmitter {
    */
   stop(): void {
     if (this.process) {
-      this.process.kill('SIGTERM')
+      this.process.kill()
       this.process = null
       this.isRunning = false
     }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect } from 'vitest';
-import { StatusBar } from './StatusBar.js';
+import { StatusBar } from '../components/StatusBar';
 
 describe('StatusBar コンポーネント', () => {
   it('ステータス情報を表示する', () => {

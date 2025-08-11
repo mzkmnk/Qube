@@ -1,9 +1,8 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
-import { ControlledTextInput } from './ControlledTextInput.js';
+import { ControlledTextInput } from './ControlledTextInput';
 
 interface InputProps {
-  prompt: string;
   value: string;
   placeholder?: string;
   disabled?: boolean;
@@ -12,7 +11,6 @@ interface InputProps {
 }
 
 export const Input: React.FC<InputProps> = ({ 
-  prompt, 
   value, 
   placeholder = 'Type your message...', 
   disabled = false,

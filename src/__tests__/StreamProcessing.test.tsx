@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { App } from '../App.js';
+import { App } from '../components/App';
 import { EventEmitter } from 'events';
 
 // MockQSessionの型定義
@@ -16,7 +16,7 @@ interface MockQSession extends EventEmitter {
 let globalMockSession: any = null;
 
 // QSessionモジュールをモック
-vi.mock('../../lib/q-session.js', () => {
+vi.mock('../lib/q-session', () => {
   const { EventEmitter } = require('events');
   
   // MockQSessionクラスをvi.mockの中で定義
@@ -48,12 +48,12 @@ vi.mock('../../lib/q-session.js', () => {
 });
 
 // Q CLI detectorのモック
-vi.mock('../../lib/q-cli-detector.js', () => ({
+vi.mock('../lib/q-cli-detector', () => ({
   detectQCLI: vi.fn().mockResolvedValue('/usr/local/bin/q')
 }));
 
 // spawnQのモック
-vi.mock('../../lib/spawn-q.js', () => ({
+vi.mock('../lib/spawn-q', () => ({
   spawnQ: vi.fn().mockResolvedValue({
     stdout: '',
     stderr: '',
@@ -103,7 +103,7 @@ describe('Stream Processing Tests - その他のストリーミング処理の�
         await new Promise(resolve => setTimeout(resolve, 50));
       }
       
-      // Then: 最新のプログレスのみ表示
+      // Then: 最新のプログレスのみ表示（出力内の出現は最大1つ）
       const output = lastFrame() || '';
       expect(output).toContain('Loading...');
       expect(output.match(/Loading\.\.\./g)?.length).toBeLessThanOrEqual(1);

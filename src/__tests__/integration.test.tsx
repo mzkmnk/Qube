@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { App } from '../components/App.js';
+import { App } from '../components/App';
 
 // モックの設定
 vi.mock('../lib/spawn-q.ts', () => ({
@@ -12,7 +12,7 @@ vi.mock('../lib/q-cli-detector.ts', () => ({
   detectQCLI: vi.fn().mockResolvedValue('/usr/local/bin/q')
 }));
 
-import { spawnQ } from '../lib/spawn-q.js';
+import { spawnQ } from '../lib/spawn-q';
 
 describe('統合テスト', () => {
   beforeEach(() => {

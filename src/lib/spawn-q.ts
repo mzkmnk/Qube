@@ -1,5 +1,5 @@
-import { spawn, type SpawnOptions } from 'node:child_process'
-import { detectQCLI } from './q-cli-detector.ts'
+import pty, { type IPty } from 'node-pty'
+import { detectQCLI } from './q-cli-detector'
 
 export interface SpawnQOptions {
   /** タイムアウト（ミリ秒） */
@@ -9,14 +9,12 @@ export interface SpawnQOptions {
   /** 作業ディレクトリ */
   cwd?: string
   /** ストリーミングデータのコールバック */
-  onData?: (type: 'stdout' | 'stderr', data: string) => void
+  onData?: (data: string) => void
 }
 
 export interface SpawnQResult {
-  /** 標準出力 */
+  /** 出力（TTY統合） */
   stdout: string
-  /** 標準エラー出力 */
-  stderr: string
   /** 終了コード */
   exitCode: number | null
 }
@@ -33,16 +31,22 @@ export async function spawnQ(
   const qBinaryPath = await detectQCLI()
   
   return new Promise((resolve, reject) => {
-    const spawnOptions: SpawnOptions = {
-      stdio: ['inherit', 'pipe', 'pipe'],
-      env: options.env ? { ...process.env, ...options.env } : process.env,
-      cwd: options.cwd
+    const env = options.env ? { ...process.env, ...options.env } : process.env
+    let child: IPty
+    try {
+      child = pty.spawn(qBinaryPath, args, {
+        name: 'xterm-color',
+        cols: 80,
+        rows: 30,
+        cwd: options.cwd,
+        env
+      })
+    } catch (error: any) {
+      reject(new Error(`Q CLIの起動に失敗しました: ${error.message}`))
+      return
     }
-
-    const child = spawn(qBinaryPath, args, spawnOptions)
     
     let stdout = ''
-    let stderr = ''
     let timeoutId: NodeJS.Timeout | undefined
     let isResolved = false
 
@@ -50,50 +54,25 @@ export async function spawnQ(
     if (options.timeout) {
       timeoutId = setTimeout(() => {
         if (!isResolved) {
-          child.kill('SIGTERM')
+          child.kill()
           isResolved = true
           reject(new Error(`コマンドがタイムアウトしました (${options.timeout! / 1000}秒)`))
         }
       }, options.timeout)
     }
 
-    // 標準出力の処理
-    if (child.stdout) {
-      child.stdout.on('data', (chunk) => {
-        const data = chunk.toString()
-        stdout += data
-        options.onData?.('stdout', data)
-      })
-    }
-
-    // 標準エラー出力の処理
-    if (child.stderr) {
-      child.stderr.on('data', (chunk) => {
-        const data = chunk.toString()
-        stderr += data
-        options.onData?.('stderr', data)
-      })
-    }
-
-    // プロセスエラーの処理
-    child.on('error', (error) => {
-      if (!isResolved) {
-        if (timeoutId) clearTimeout(timeoutId)
-        isResolved = true
-        reject(new Error(`Q CLIの起動に失敗しました: ${error.message}`))
-      }
+    // PTYのデータは統合ストリーム
+    child.onData((data) => {
+      stdout += data
+      options.onData?.(data)
     })
 
     // プロセス終了の処理
-    child.on('close', (code) => {
+    child.onExit(({ exitCode }) => {
       if (!isResolved) {
         if (timeoutId) clearTimeout(timeoutId)
         isResolved = true
-        resolve({
-          stdout,
-          stderr,
-          exitCode: code
-        })
+        resolve({ stdout, exitCode })
       }
     })
   })
