@@ -95,7 +95,6 @@ describe('UI Component Tests - UIコンポーネントのテスト', () => {
       // Given & When
       const { lastFrame } = render(
         <Input 
-          prompt=">" 
           value="" 
           disabled={false}
           onChange={() => {}}
@@ -112,7 +111,6 @@ describe('UI Component Tests - UIコンポーネントのテスト', () => {
       // Given & When
       const { lastFrame } = render(
         <Input 
-          prompt=">" 
           value="" 
           disabled={true}
           onChange={() => {}}

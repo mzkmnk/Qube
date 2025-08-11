@@ -25,7 +25,6 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
   const [history] = useState(() => new CommandHistory());
   const [session] = useState(() => new QSession());
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [streamBuffer, setStreamBuffer] = useState(''); // ストリーミングデータのバッファ
   const [currentProgressLine, setCurrentProgressLine] = useState<string | null>(null); // 現在のプログレス行
   
   // 起動時に自動的にQ chatセッションを開始
@@ -221,7 +220,6 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
         ...(currentProgressLine ? [currentProgressLine] : [])
       ]} />
       <Input
-        prompt=">"
         value={inputValue}
         placeholder="Enter Q command..."
         disabled={status === 'running' && mode === 'command'}
