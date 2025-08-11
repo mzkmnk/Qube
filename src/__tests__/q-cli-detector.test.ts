@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { detectQCLI } from "../lib/q-cli-detector";
-import child_process, { type exec } from "node:child_process";
+import child_process from "node:child_process";
 
 vi.mock("node:child_process");
 vi.mock("node:util", () => ({
-  promisify: vi.fn((fn) => fn),
+  promisify: vi.fn((fn: unknown) => fn),
 }));
 
 describe("Q CLI検出", () => {
@@ -24,7 +24,7 @@ describe("Q CLI検出", () => {
       .fn()
       .mockResolvedValue({ stdout: "/custom/path/to/q", stderr: "" });
     vi.mocked(child_process.exec).mockImplementation(
-      mockExec as unknown as exec,
+      mockExec as unknown as typeof child_process.exec,
     );
 
     // Act
@@ -41,7 +41,7 @@ describe("Q CLI検出", () => {
       .fn()
       .mockResolvedValue({ stdout: "/usr/local/bin/amazonq", stderr: "" });
     vi.mocked(child_process.exec).mockImplementation(
-      mockExec as unknown as exec,
+      mockExec as unknown as typeof child_process.exec,
     );
 
     // Act
@@ -59,7 +59,7 @@ describe("Q CLI検出", () => {
       .mockRejectedValueOnce(new Error("amazonq not found"))
       .mockResolvedValueOnce({ stdout: "/usr/local/bin/q", stderr: "" });
     vi.mocked(child_process.exec).mockImplementation(
-      mockExec as unknown as exec,
+      mockExec as unknown as typeof child_process.exec,
     );
 
     // Act
@@ -79,7 +79,7 @@ describe("Q CLI検出", () => {
       .mockRejectedValueOnce(new Error("amazonq not found"))
       .mockRejectedValueOnce(new Error("q not found"));
     vi.mocked(child_process.exec).mockImplementation(
-      mockExec as unknown as exec,
+      mockExec as unknown as typeof child_process.exec,
     );
 
     // Act & Assert
@@ -93,7 +93,7 @@ describe("Q CLI検出", () => {
     process.env.Q_BIN = "/invalid/path/to/q";
     const mockExec = vi.fn().mockRejectedValue(new Error("not found"));
     vi.mocked(child_process.exec).mockImplementation(
-      mockExec as unknown as exec,
+      mockExec as unknown as typeof child_process.exec,
     );
 
     // Act & Assert

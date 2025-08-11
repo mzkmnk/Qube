@@ -22,7 +22,6 @@ describe("統合テスト", () => {
   it("コマンドを入力して実行できる", async () => {
     vi.mocked(spawnQ).mockResolvedValue({
       stdout: "Hello from Q CLI",
-      stderr: "",
       exitCode: 0,
     });
 
@@ -61,7 +60,6 @@ describe("統合テスト", () => {
   it("Ctrl+L で出力をクリアできる", () => {
     vi.mocked(spawnQ).mockResolvedValue({
       stdout: "Some output",
-      stderr: "",
       exitCode: 0,
     });
 
@@ -81,8 +79,7 @@ describe("統合テスト", () => {
 
   it("エラーが発生した場合、エラーカウントが増える", async () => {
     vi.mocked(spawnQ).mockResolvedValue({
-      stdout: "",
-      stderr: "Error occurred",
+      stdout: "Error occurred",
       exitCode: 1,
     });
 

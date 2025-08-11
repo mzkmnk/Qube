@@ -14,9 +14,9 @@ import type { Mock } from "vitest";
 type MockPty = {
   onData: (cb: (d: string) => void) => void;
   onExit: (cb: (e: { exitCode: number }) => void) => void;
-  write: Mock<[string], void>;
-  resize: Mock<[number, number], void>;
-  kill: Mock<[string?], void>;
+  write: Mock;
+  resize: Mock;
+  kill: Mock;
   pid: number;
   __emitData: (d: string) => void;
   __emitExit: (code: number) => void;
@@ -47,7 +47,7 @@ describe("QSession", () => {
       __emitExit: (code: number) => listeners.exit?.({ exitCode: code }),
     };
 
-    vi.mocked(pty.spawn).mockReturnValue(mockPty as IPty);
+    vi.mocked(pty.spawn).mockReturnValue(mockPty as unknown as IPty);
   });
 
   afterEach(() => {
@@ -60,7 +60,9 @@ describe("QSession", () => {
     expect(pty.spawn).toHaveBeenCalledWith(
       "/usr/local/bin/q",
       ["chat"],
-      expect.objectContaining({ env: expect.any(Object) }),
+      expect.objectContaining({
+        env: expect.any(Object) as Record<string, unknown>,
+      }),
     );
     expect(session.running).toBe(true);
   });

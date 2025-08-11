@@ -4,11 +4,11 @@ import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
 import { App } from "../components/App";
 
 type MockQSession = {
-  start: Mock<[string | undefined], Promise<void>>;
-  stop: Mock<[], void>;
-  send: Mock<[string], void>;
-  on: Mock<[string, (...args: unknown[]) => void], void>;
-  removeListener: Mock<[string, (...args: unknown[]) => void], void>;
+  start: Mock;
+  stop: Mock;
+  send: Mock;
+  on: Mock;
+  removeListener: Mock;
   running: boolean;
 };
 

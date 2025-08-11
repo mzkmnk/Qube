@@ -51,14 +51,13 @@ vi.mock("../lib/q-cli-detector", () => ({
 vi.mock("../lib/spawn-q", () => ({
   spawnQ: vi.fn().mockResolvedValue({
     stdout: "",
-    stderr: "",
     exitCode: 0,
   }),
 }));
 
 describe("メッセージバッファリング処理のテスト", () => {
-  let mockSession: MockQSession;
-  let App;
+  let mockSession: MockQSession | null;
+  let App: typeof import("../components/App").App;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -82,23 +81,21 @@ describe("メッセージバッファリング処理のテスト", () => {
     mockSession = globalMockSession;
 
     // When: 文章を分割して送信
-    if (mockSession) {
-      // 短い不完全な文章を送信（改行なし、80文字未満、文末記号なし）
-      mockSession.emit("data", "stdout", "Hello ");
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    // 短い不完全な文章を送信（改行なし、80文字未満、文末記号なし）
+    mockSession?.emit("data", "stdout", "Hello ");
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // 短い文章（80文字未満、文末記号なし）はバッファリングされる
-      let output = lastFrame() || "";
-      expect(output).not.toContain("Hello ");
+    // 短い文章（80文字未満、文末記号なし）はバッファリングされる
+    let output = lastFrame() || "";
+    expect(output).not.toContain("Hello ");
 
-      // 改行付きで続きを送信
-      mockSession.emit("data", "stdout", "World!\n");
-      await new Promise((resolve) => setTimeout(resolve, 150));
+    // 改行付きで続きを送信
+    mockSession?.emit("data", "stdout", "World!\n");
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
-      // Then: 完全な文章が表示される
-      output = lastFrame() || "";
-      expect(output).toContain("Hello World!");
-    }
+    // Then: 完全な文章が表示される
+    output = lastFrame() || "";
+    expect(output).toContain("Hello World!");
   });
 
   it("Given: 改行を含むデータ, When: データが送信される, Then: 改行ごとに行が分割される", async () => {
@@ -109,9 +106,7 @@ describe("メッセージバッファリング処理のテスト", () => {
     mockSession = globalMockSession;
 
     // When
-    if (mockSession) {
-      mockSession.emit("data", "stdout", "Line 1\nLine 2\nLine 3\n");
-    }
+    mockSession?.emit("data", "stdout", "Line 1\nLine 2\nLine 3\n");
 
     await new Promise((resolve) => setTimeout(resolve, 150));
 
@@ -130,13 +125,11 @@ describe("メッセージバッファリング処理のテスト", () => {
     mockSession = globalMockSession;
 
     // When: 文末記号（感嘆符）で終わるデータを送信
-    if (mockSession) {
-      mockSession.emit("data", "stdout", "Welcome to Amazon Q!");
-      await new Promise((resolve) => setTimeout(resolve, 150));
+    mockSession?.emit("data", "stdout", "Welcome to Amazon Q!");
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
-      // Then: パススルー方針のため改行が来るまで表示されない
-      const output = lastFrame() || "";
-      expect(output).not.toContain("Welcome to Amazon Q!");
-    }
+    // Then: パススルー方針のため改行が来るまで表示されない
+    const output = lastFrame() || "";
+    expect(output).not.toContain("Welcome to Amazon Q!");
   });
 });
