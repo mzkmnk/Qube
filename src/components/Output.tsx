@@ -22,8 +22,6 @@ export const Output: React.FC<OutputProps> = ({ lines, height }) => {
       flexDirection="column"
       height={height}
       flexGrow={1}
-      borderStyle="single"
-      borderColor="gray"
       paddingX={1}
       paddingY={0}
     >
