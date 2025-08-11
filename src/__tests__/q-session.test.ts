@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { QSession } from '../lib/q-session.js';
+import { QSession } from '../lib/q-session';
 import * as pty from 'node-pty';
 import type { IPty } from 'node-pty';
 

@@ -1,10 +1,10 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect } from 'vitest';
-import { Header } from '../components/Header.js';
-import { Output } from '../components/Output.js';
-import { Input } from '../components/Input.js';
-import { StatusBar } from '../components/StatusBar.js';
+import { Header } from '../components/Header';
+import { Output } from '../components/Output';
+import { Input } from '../components/Input';
+import { StatusBar } from '../components/StatusBar';
 
 describe('UI Component Tests - UIコンポーネントのテスト', () => {
   

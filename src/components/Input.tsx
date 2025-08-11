@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
-import { ControlledTextInput } from './ControlledTextInput.js';
+import { ControlledTextInput } from './ControlledTextInput';
 
 interface InputProps {
   value: string;

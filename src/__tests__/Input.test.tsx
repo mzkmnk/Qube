@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect, vi } from 'vitest';
-import { Input } from '../components/Input.js';
+import { Input } from '../components/Input';
 
 describe('Input コンポーネント', () => {
   it('プロンプトと入力値を表示する', () => {

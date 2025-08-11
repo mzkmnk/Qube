@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect } from 'vitest';
-import { Header } from '../components/Header.js';
+import { Header } from '../components/Header';
 
 describe('Header コンポーネント', () => {
   it('タイトルとバージョンを表示する', () => {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect, vi } from 'vitest';
-import { App } from '../components/App.js';
+import { App } from '../components/App';
 
 // モックの設定
 vi.mock('../lib/spawn-q.ts', () => ({

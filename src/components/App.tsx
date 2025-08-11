@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Box, useInput, useApp } from 'ink';
-import { Header } from './Header.js';
-import { Output } from './Output.js';
-import { Input } from './Input.js';
-import { StatusBar } from './StatusBar.js';
-import { CommandHistory } from '../lib/history.js';
-import { QSession } from '../lib/q-session.js';
-import { StreamProcessor } from '../lib/stream-processor.js';
-import { KeyboardHandler } from '../lib/keyboard-handler.js';
-import { CommandExecutor } from '../lib/command-executor.js';
+import { Header } from './Header';
+import { Output } from './Output';
+import { Input } from './Input';
+import { StatusBar } from './StatusBar';
+import { CommandHistory } from '../lib/history';
+import { QSession } from '../lib/q-session';
+import { StreamProcessor } from '../lib/stream-processor';
+import { KeyboardHandler } from '../lib/keyboard-handler';
+import { CommandExecutor } from '../lib/command-executor';
 
 interface AppProps {
   version?: string;
@@ -91,7 +91,12 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
   // コマンド実行エンジンの初期化
   const [commandExecutor] = useState(() => new CommandExecutor(session, {
     onModeChange: setMode,
-    onStatusChange: setStatus,
+    onStatusChange: (nextStatus) => {
+      setStatus(nextStatus);
+      if (nextStatus === 'ready' && !session.running) {
+        setCurrentCommand(undefined);
+      }
+    },
     onOutput: (lines) => {
       if (typeof lines === 'string') {
         setOutputLines(prev => [...prev, lines]);
