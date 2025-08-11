@@ -29,19 +29,19 @@ export class KeyboardHandler {
    */
   handleInput(input: string, key: KeyInfo): void {
     // Ctrl+D: 終了
-    if (key.ctrl && input === 'd') {
+    if (key.ctrl && input === "d") {
       this.callbacks.onExit();
       return;
     }
 
     // Ctrl+C: 中断
-    if (key.ctrl && input === 'c') {
+    if (key.ctrl && input === "c") {
       this.callbacks.onInterrupt();
       return;
     }
 
     // Ctrl+L: クリア
-    if (key.ctrl && input === 'l') {
+    if (key.ctrl && input === "l") {
       this.callbacks.onClear();
       return;
     }

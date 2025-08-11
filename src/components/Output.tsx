@@ -1,5 +1,5 @@
-import React from 'react';
-import { Box, Text } from 'ink';
+import React from "react";
+import { Box, Text } from "ink";
 
 interface OutputProps {
   lines: string[];
@@ -12,9 +12,10 @@ interface OutputProps {
  */
 export const Output: React.FC<OutputProps> = ({ lines, height }) => {
   // 高さ指定がある場合は最新の行を優先表示
-  const displayLines = height && height > 0 && lines.length > height
-    ? lines.slice(-height)
-    : lines;
+  const displayLines =
+    height && height > 0 && lines.length > height
+      ? lines.slice(-height)
+      : lines;
 
   return (
     <Box
@@ -27,7 +28,9 @@ export const Output: React.FC<OutputProps> = ({ lines, height }) => {
       paddingY={0}
     >
       {displayLines.length === 0 ? (
-        <Text color="gray" dimColor>Waiting for output...</Text>
+        <Text color="gray" dimColor>
+          Waiting for output...
+        </Text>
       ) : (
         displayLines.map((line, index) => (
           <Text key={`${index}-${line.substring(0, 20)}`}>{line}</Text>
