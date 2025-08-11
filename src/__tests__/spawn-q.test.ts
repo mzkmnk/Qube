@@ -1,4 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  type Mock,
+} from "vitest";
 import { spawnQ, type SpawnQOptions } from "../lib/spawn-q";
 import * as qCliDetector from "../lib/q-cli-detector";
 import * as pty from "node-pty";
