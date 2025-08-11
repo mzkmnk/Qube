@@ -1,8 +1,8 @@
-import React from 'react';
-import { render } from 'ink-testing-library';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { App } from '../components/App';
-import { EventEmitter } from 'events';
+import React from "react";
+import { render } from "ink-testing-library";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { App } from "../components/App";
+import { EventEmitter } from "events";
 
 // MockQSessionの型定義
 interface MockQSession extends EventEmitter {
@@ -13,131 +13,131 @@ interface MockQSession extends EventEmitter {
 }
 
 // グローバルなモックセッションインスタンス
-let globalMockSession: any = null;
+let globalMockSession: MockQSession | null = null;
 
 // QSessionモジュールをモック
-vi.mock('../lib/q-session', () => {
-  const { EventEmitter } = require('events');
-  
+vi.mock("../lib/q-session", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { EventEmitter } = require("events");
   class MockQSession extends EventEmitter {
     running = false;
-    
-    async start(type: string) {
+
+    async start(_type: string) {
       this.running = true;
       return Promise.resolve();
     }
-    
+
     stop() {
       this.running = false;
     }
-    
-    send(command: string) {
+
+    send(_command: string) {
       // メッセージ送信のシミュレーション
     }
   }
-  
+
   return {
     QSession: vi.fn(() => {
       const newSession = new MockQSession();
       globalMockSession = newSession;
       return newSession;
-    })
+    }),
   };
 });
 
 // Q CLI detectorのモック
-vi.mock('../lib/q-cli-detector', () => ({
-  detectQCLI: vi.fn().mockResolvedValue('/usr/local/bin/q')
+vi.mock("../lib/q-cli-detector", () => ({
+  detectQCLI: vi.fn().mockResolvedValue("/usr/local/bin/q"),
 }));
 
 // spawnQのモック
-vi.mock('../lib/spawn-q', () => ({
+vi.mock("../lib/spawn-q", () => ({
   spawnQ: vi.fn().mockResolvedValue({
-    stdout: '',
-    stderr: '',
-    exitCode: 0
-  })
+    stdout: "",
+    stderr: "",
+    exitCode: 0,
+  }),
 }));
 
-describe('メッセージバッファリング処理のテスト', () => {
+describe("メッセージバッファリング処理のテスト", () => {
   let mockSession: MockQSession;
 
   beforeEach(() => {
     vi.clearAllMocks();
     globalMockSession = null;
   });
-  
+
   afterEach(async () => {
     if (globalMockSession) {
       globalMockSession.removeAllListeners();
       globalMockSession = null;
     }
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   });
 
-  it('Given: 不完全な文章, When: データがストリーミングで送信される, Then: 改行が来るまでバッファリングされる', async () => {
+  it("Given: 不完全な文章, When: データがストリーミングで送信される, Then: 改行が来るまでバッファリングされる", async () => {
     // Given
     const { lastFrame } = render(<App />);
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     mockSession = globalMockSession;
-    
+
     // When: 文章を分割して送信
     if (mockSession) {
       // 短い不完全な文章を送信（改行なし、80文字未満、文末記号なし）
-      mockSession.emit('data', 'stdout', 'Hello ');
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      mockSession.emit("data", "stdout", "Hello ");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // 短い文章（80文字未満、文末記号なし）はバッファリングされる
-      let output = lastFrame() || '';
-      expect(output).not.toContain('Hello ');
-      
+      let output = lastFrame() || "";
+      expect(output).not.toContain("Hello ");
+
       // 改行付きで続きを送信
-      mockSession.emit('data', 'stdout', 'World!\n');
-      await new Promise(resolve => setTimeout(resolve, 150));
-      
+      mockSession.emit("data", "stdout", "World!\n");
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       // Then: 完全な文章が表示される
-      output = lastFrame() || '';
-      expect(output).toContain('Hello World!');
+      output = lastFrame() || "";
+      expect(output).toContain("Hello World!");
     }
   });
 
-  it('Given: 改行を含むデータ, When: データが送信される, Then: 改行ごとに行が分割される', async () => {
+  it("Given: 改行を含むデータ, When: データが送信される, Then: 改行ごとに行が分割される", async () => {
     // Given
     const { lastFrame } = render(<App />);
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     mockSession = globalMockSession;
-    
+
     // When
     if (mockSession) {
-      mockSession.emit('data', 'stdout', 'Line 1\nLine 2\nLine 3\n');
+      mockSession.emit("data", "stdout", "Line 1\nLine 2\nLine 3\n");
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 150));
-    
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
     // Then
-    const output = lastFrame() || '';
-    expect(output).toContain('Line 1');
-    expect(output).toContain('Line 2');
-    expect(output).toContain('Line 3');
+    const output = lastFrame() || "";
+    expect(output).toContain("Line 1");
+    expect(output).toContain("Line 2");
+    expect(output).toContain("Line 3");
   });
 
-  it('Given: 文末記号を含むデータ, When: 改行なしで送信される, Then: 改行が来るまでバッファリングされる', async () => {
+  it("Given: 文末記号を含むデータ, When: 改行なしで送信される, Then: 改行が来るまでバッファリングされる", async () => {
     // Given
     const { lastFrame } = render(<App />);
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     mockSession = globalMockSession;
-    
+
     // When: 文末記号（感嘆符）で終わるデータを送信
     if (mockSession) {
-      mockSession.emit('data', 'stdout', 'Welcome to Amazon Q!');
-      await new Promise(resolve => setTimeout(resolve, 150));
-      
+      mockSession.emit("data", "stdout", "Welcome to Amazon Q!");
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       // Then: パススルー方針のため改行が来るまで表示されない
-      const output = lastFrame() || '';
-      expect(output).not.toContain('Welcome to Amazon Q!');
+      const output = lastFrame() || "";
+      expect(output).not.toContain("Welcome to Amazon Q!");
     }
   });
 });

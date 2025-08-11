@@ -39,13 +39,13 @@ export class CommandHistory {
    * 前の履歴を取得
    */
   getPrevious(): string {
-    if (this.history.length === 0) return '';
+    if (this.history.length === 0) return "";
 
     if (this.currentIndex > 0) {
       this.currentIndex--;
     }
 
-    return this.history[this.currentIndex] || '';
+    return this.history[this.currentIndex] || "";
   }
 
   /**
@@ -59,7 +59,7 @@ export class CommandHistory {
 
     // 最新を超えたら空文字を返す
     this.currentIndex = this.history.length;
-    return '';
+    return "";
   }
 
   /**

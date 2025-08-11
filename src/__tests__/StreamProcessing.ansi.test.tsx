@@ -1,8 +1,8 @@
-import React from 'react';
-import { render } from 'ink-testing-library';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { App } from '../components/App';
-import { EventEmitter } from 'events';
+import React from "react";
+import { render } from "ink-testing-library";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { App } from "../components/App";
+import { EventEmitter } from "events";
 
 // MockQSessionの型定義
 interface MockQSession extends EventEmitter {
@@ -13,103 +13,103 @@ interface MockQSession extends EventEmitter {
 }
 
 // グローバルなモックセッションインスタンス
-let globalMockSession: any = null;
+let globalMockSession: MockQSession | null = null;
 
 // QSessionモジュールをモック
-vi.mock('../lib/q-session', () => {
-  const { EventEmitter } = require('events');
-  
+vi.mock("../lib/q-session", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { EventEmitter } = require("events");
   class MockQSession extends EventEmitter {
     running = false;
-    
-    async start(type: string) {
+
+    async start(_type: string) {
       this.running = true;
       return Promise.resolve();
     }
-    
+
     stop() {
       this.running = false;
     }
-    
-    send(command: string) {
+
+    send(_command: string) {
       // メッセージ送信のシミュレーション
     }
   }
-  
+
   return {
     QSession: vi.fn(() => {
       const newSession = new MockQSession();
       globalMockSession = newSession;
       return newSession;
-    })
+    }),
   };
 });
 
 // Q CLI detectorのモック
-vi.mock('../lib/q-cli-detector', () => ({
-  detectQCLI: vi.fn().mockResolvedValue('/usr/local/bin/q')
+vi.mock("../lib/q-cli-detector", () => ({
+  detectQCLI: vi.fn().mockResolvedValue("/usr/local/bin/q"),
 }));
 
 // spawnQのモック
-vi.mock('../lib/spawn-q', () => ({
+vi.mock("../lib/spawn-q", () => ({
   spawnQ: vi.fn().mockResolvedValue({
-    stdout: '',
-    stderr: '',
-    exitCode: 0
-  })
+    stdout: "",
+    stderr: "",
+    exitCode: 0,
+  }),
 }));
 
-describe('ANSIエスケープコード処理のテスト', () => {
+describe("ANSIエスケープコード処理のテスト", () => {
   let mockSession: MockQSession;
 
   beforeEach(() => {
     vi.clearAllMocks();
     globalMockSession = null;
   });
-  
+
   afterEach(async () => {
     if (globalMockSession) {
       globalMockSession.removeAllListeners();
       globalMockSession = null;
     }
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   });
 
-  it('Given: ANSIエスケープコードを含むデータ, When: データが受信される, Then: 生データが表示される', async () => {
+  it("Given: ANSIエスケープコードを含むデータ, When: データが受信される, Then: 生データが表示される", async () => {
     // Given
     const { lastFrame } = render(<App />);
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     mockSession = globalMockSession;
-    
+
     // When
     if (mockSession) {
-      mockSession.emit('data', 'stdout', '\x1b[32mGreen Text\x1b[0m\n');
+      mockSession.emit("data", "stdout", "\x1b[32mGreen Text\x1b[0m\n");
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 150));
-    
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
     // Then
-    const output = lastFrame() || '';
-    expect(output).toContain('Green Text');
+    const output = lastFrame() || "";
+    expect(output).toContain("Green Text");
   });
 
-  it('Given: 256色ANSIコードを含むデータ, When: データが受信される, Then: 生データが表示される', async () => {
+  it("Given: 256色ANSIコードを含むデータ, When: データが受信される, Then: 生データが表示される", async () => {
     // Given
     const { lastFrame } = render(<App />);
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     mockSession = globalMockSession;
-    
+
     // When
     if (mockSession) {
-      mockSession.emit('data', 'stdout', '\x1b[38;5;12mColored Text\x1b[0m\n');
+      mockSession.emit("data", "stdout", "\x1b[38;5;12mColored Text\x1b[0m\n");
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 150));
-    
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
     // Then
-    const output = lastFrame() || '';
-    expect(output).toContain('Colored Text');
+    const output = lastFrame() || "";
+    expect(output).toContain("Colored Text");
   });
 });

@@ -9,7 +9,7 @@ export interface StreamProcessorConfig {
 }
 
 export class StreamProcessor {
-  private buffer = '';
+  private buffer = "";
   private currentProgressLine: string | null = null;
   private config: StreamProcessorConfig;
 
@@ -23,32 +23,32 @@ export class StreamProcessor {
    */
   processData(_type: string, data: string): void {
     // CRLF正規化（ANSIや色は保持）
-    let merged = (this.buffer + data).replace(/\r\n/g, '\n');
+    let merged = (this.buffer + data).replace(/\r\n/g, "\n");
 
     // CR（キャリッジリターン）を利用した進捗行の更新
-    if (merged.includes('\r')) {
-      const crParts = merged.split('\r');
+    if (merged.includes("\r")) {
+      const crParts = merged.split("\r");
       const lastPart = crParts[crParts.length - 1];
-      
+
       // 進捗パターンの検出
       const progressPatterns = [
         /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏].*\.{3}/, // スピナー + ...
         /Loading\.\.\./,
         /Processing\.\.\./,
-        /Downloading|Uploading|Indexing/i
+        /Downloading|Uploading|Indexing/i,
       ];
-      
-      if (progressPatterns.some(p => p.test(lastPart))) {
+
+      if (progressPatterns.some((p) => p.test(lastPart))) {
         this.currentProgressLine = lastPart.trim();
         this.config.onProgressUpdate(this.currentProgressLine);
       }
-      
+
       // 最新内容のみを対象にして以降の処理を行う
       merged = lastPart;
     }
 
-    const parts = merged.split('\n');
-    const incomplete = parts.pop() || '';
+    const parts = merged.split("\n");
+    const incomplete = parts.pop() || "";
     const linesToAdd: string[] = [];
 
     // 改行が来たタイミングで、進捗行が存在すれば1回だけ履歴に残す
@@ -61,15 +61,16 @@ export class StreamProcessor {
     for (const line of parts) {
       const trimmed = line.trim();
       if (!trimmed) continue;
-      
+
       // Thinking... 系の行は抑制
-      if (trimmed === 'Thinking...' || trimmed.includes('Thinking...')) continue;
-      
+      if (trimmed === "Thinking..." || trimmed.includes("Thinking..."))
+        continue;
+
       linesToAdd.push(line);
     }
 
     this.buffer = incomplete;
-    
+
     if (linesToAdd.length > 0) {
       this.config.onLinesReady(linesToAdd);
     }
@@ -86,7 +87,7 @@ export class StreamProcessor {
    * バッファをクリア
    */
   clear(): void {
-    this.buffer = '';
+    this.buffer = "";
     this.currentProgressLine = null;
   }
 }
