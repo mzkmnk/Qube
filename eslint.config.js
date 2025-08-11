@@ -53,13 +53,13 @@ export default tseslint.config(
     },
     rules: {
       'react/react-in-jsx-scope': 'off',
-      'react/prop-types': 'off', // Handled by TypeScript
-      '@typescript-eslint/no-explicit-any': 'error', // User requirement
+      'react/prop-types': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_' },
       ],
-      '@typescript-eslint/no-unsafe-argument': 'warn', // Start with warn to not block fixing `any`
+      '@typescript-eslint/no-unsafe-argument': 'warn',
       '@typescript-eslint/no-unsafe-assignment': 'warn',
       '@typescript-eslint/no-unsafe-call': 'warn',
       '@typescript-eslint/no-unsafe-member-access': 'warn',
