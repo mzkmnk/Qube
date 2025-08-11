@@ -69,16 +69,19 @@ const formatLine = (line: string, isInCodeBlock = false): React.ReactNode => {
   
   // Amazon Q CLI Tools関連の出力を処理
   
-  // Tool使用開始（🛠️  Using tool: xxx）
-  if (line.match(/🛠️\s+Using tool:\s+(\w+)\s*(\([^)]*\))?/)) {
-    const match = line.match(/🛠️\s+Using tool:\s+(\w+)\s*(\([^)]*\))?/);
-    const toolName = match?.[1] || 'unknown';
-    const status = match?.[2] || '';
+  // Tool使用開始（🛠️  Using tool: xxx または 🔧 fs_write）
+  if (line.match(/🛠️\s+Using tool:\s+(\w+)\s*(\([^)]*\))?/) || line.match(/🔧\s+(\w+)/)) {
+    const useToolMatch = line.match(/🛠️\s+Using tool:\s+(\w+)\s*(\([^)]*\))?/);
+    const fsToolMatch = line.match(/🔧\s+(\w+)/);
+    
+    const toolName = useToolMatch?.[1] || fsToolMatch?.[1] || 'unknown';
+    const status = useToolMatch?.[2] || '';
+    
     return (
-      <Box>
-        <Text color="blue">🔧 </Text>
-        <Text color="blue" bold>{toolName}</Text>
-        <Text color="gray" dimColor> {status}</Text>
+      <Box paddingX={1}>
+        <Text color="white" backgroundColor="blue" bold>
+          🔧 {toolName}{status}
+        </Text>
       </Box>
     );
   }
@@ -145,6 +148,99 @@ const formatLine = (line: string, isInCodeBlock = false): React.ReactNode => {
   // Tool関連の冗長な出力をフィルタ
   if (line.match(/^\s*[│⋮●]+\s+/) && !line.match(/(Reading|Writing|Creating|Updating|Processing|Successfully|Completed|Failed)/)) {
     return null; // 表示しない
+  }
+  
+  // GitHub Diff風: 改善された差分表示（コンパクト版）
+  // Amazon Q CLIの複雑なパターンを統一された見やすい形式に変換
+  
+  // パターン1: 変更なしの行（oldNum, newNum: code）
+  const unchangedMatch = line.match(/^\s*(\d+),\s*(\d+):\s*(.*)$/);
+  if (unchangedMatch) {
+    const lineNum = unchangedMatch[2].padStart(4, ' ');
+    const code = unchangedMatch[3];
+    
+    return (
+      <Box>
+        <Text color="gray">{lineNum} │ </Text>
+        <Text>{code}</Text>
+      </Box>
+    );
+  }
+  
+  // パターン2: 削除行（• num : code）
+  const removedMatch = line.match(/^\s*•\s*(\d+)\s*:\s*(.*)$/);
+  if (removedMatch) {
+    const lineNum = removedMatch[1].padStart(2, ' ');
+    const code = removedMatch[2];
+    
+    return (
+      <Box>
+        <Text color="red" bold> -{lineNum} │ </Text>
+        <Text color="red" dimColor>{code}</Text>
+      </Box>
+    );
+  }
+  
+  // パターン3: 追加行（+ num: code）
+  const addedMatch = line.match(/^\s*\+\s*(\d+):\s*(.*)$/);
+  if (addedMatch) {
+    const lineNum = addedMatch[1].padStart(2, ' ');
+    const code = addedMatch[2];
+    
+    return (
+      <Box>
+        <Text color="green" bold> +{lineNum} │ </Text>
+        <Text color="green">{code}</Text>
+      </Box>
+    );
+  }
+  
+  // パターン4: Amazon Q CLIの別形式（- lineNum : code）形式の削除行
+  const altRemoveMatch = line.match(/^\s*-\s*(\d+)\s*:\s*(.*)$/);
+  if (altRemoveMatch) {
+    const lineNum = altRemoveMatch[1].padStart(2, ' ');
+    const code = altRemoveMatch[2];
+    
+    return (
+      <Box>
+        <Text color="red" bold> -{lineNum} │ </Text>
+        <Text color="red" dimColor>{code}</Text>
+      </Box>
+    );
+  }
+  
+  // パターン5: 単純な追加行（行番号なし、+ で始まる）
+  if (line.trim().startsWith('+') && !line.match(/^\s*\+\s*\d+:/)) {
+    const content = line.replace(/^\s*\+\s*/, '');
+    return (
+      <Box>
+        <Text color="green" bold>  +   │ </Text>
+        <Text color="green">{content}</Text>
+      </Box>
+    );
+  }
+  
+  // パターン6: 単純な削除行（行番号なし、- で始まる）
+  if (line.trim().startsWith('-') && !line.match(/^\s*-\s*\d+:/) && !line.match(/^---+|^--$/)) {
+    const content = line.replace(/^\s*-\s*/, '');
+    return (
+      <Box>
+        <Text color="red" bold>  -   │ </Text>
+        <Text color="red" dimColor>{content}</Text>
+      </Box>
+    );
+  }
+  
+  // ファイル目的表示（↳ Purpose:）
+  if (line.match(/↳\s*Purpose:/)) {
+    const purposeText = line.replace(/↳\s*Purpose:\s*/, '').trim();
+    return (
+      <Box>
+        <Text color="black" backgroundColor="cyanBright">
+          ↳ Purpose: {purposeText}
+        </Text>
+      </Box>
+    );
   }
   
   // Markdown処理
