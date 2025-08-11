@@ -1,7 +1,6 @@
 import React from "react";
 import { render } from "ink-testing-library";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { App } from "../components/App";
 import { EventEmitter } from "events";
 
 // MockQSessionの型定義
@@ -16,9 +15,7 @@ interface MockQSession extends EventEmitter {
 let globalMockSession: MockQSession | null = null;
 
 // QSessionモジュールをモック
-vi.mock("../lib/q-session", () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { EventEmitter } = require("events");
+vi.doMock("../lib/q-session", () => {
   class MockQSession extends EventEmitter {
     running = false;
 
@@ -61,10 +58,12 @@ vi.mock("../lib/spawn-q", () => ({
 
 describe("メッセージバッファリング処理のテスト", () => {
   let mockSession: MockQSession;
+  let App;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     globalMockSession = null;
+    App = (await import("../components/App")).App;
   });
 
   afterEach(async () => {
