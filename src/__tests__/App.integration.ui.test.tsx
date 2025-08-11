@@ -7,7 +7,7 @@ import { App } from '../components/App';
 let mockSessionInstance: any;
 
 // QSessionのモック
-vi.mock('../lib/q-session.js', () => ({
+vi.mock('../lib/q-session', () => ({
   QSession: vi.fn().mockImplementation(() => {
     if (!mockSessionInstance) {
       mockSessionInstance = {
@@ -24,12 +24,12 @@ vi.mock('../lib/q-session.js', () => ({
 }));
 
 // Q CLI detectorのモック
-vi.mock('../lib/q-cli-detector.js', () => ({
+vi.mock('../lib/q-cli-detector', () => ({
   detectQCLI: vi.fn().mockResolvedValue('/usr/local/bin/q')
 }));
 
 // spawnQのモック（Appコンポーネントが使用する場合）
-vi.mock('../lib/spawn-q.js', () => ({
+vi.mock('../lib/spawn-q', () => ({
   spawnQ: vi.fn().mockResolvedValue({
     stdout: '',
     stderr: '',

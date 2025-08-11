@@ -16,7 +16,7 @@ interface MockQSession extends EventEmitter {
 let globalMockSession: any = null;
 
 // QSessionモジュールをモック
-vi.mock('../lib/q-session.js', () => {
+vi.mock('../lib/q-session', () => {
   const { EventEmitter } = require('events');
   
   class MockQSession extends EventEmitter {
@@ -46,12 +46,12 @@ vi.mock('../lib/q-session.js', () => {
 });
 
 // Q CLI detectorのモック
-vi.mock('../lib/q-cli-detector.js', () => ({
+vi.mock('../lib/q-cli-detector', () => ({
   detectQCLI: vi.fn().mockResolvedValue('/usr/local/bin/q')
 }));
 
 // spawnQのモック
-vi.mock('../lib/spawn-q.js', () => ({
+vi.mock('../lib/spawn-q', () => ({
   spawnQ: vi.fn().mockResolvedValue({
     stdout: '',
     stderr: '',
