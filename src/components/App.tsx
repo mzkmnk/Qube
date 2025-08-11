@@ -7,6 +7,7 @@ import { StatusBar } from './StatusBar.js';
 import { CommandHistory } from '../lib/history.js';
 import { QSession } from '../lib/q-session.js';
 import { spawnQ } from '../lib/spawn-q.js';
+import { StreamProcessor } from '../lib/stream-processor.js';
 
 interface AppProps {
   version?: string;
@@ -25,7 +26,13 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
   const [history] = useState(() => new CommandHistory());
   const [session] = useState(() => new QSession());
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [currentProgressLine, setCurrentProgressLine] = useState<string | null>(null); // 現在のプログレス行
+  const [currentProgressLine, setCurrentProgressLine] = useState<string | null>(null);
+  
+  // ストリーム処理の専用プロセッサー
+  const [streamProcessor] = useState(() => new StreamProcessor({
+    onLinesReady: (lines) => setOutputLines(prev => [...prev, ...lines]),
+    onProgressUpdate: (line) => setCurrentProgressLine(line)
+  }));
   
   // 起動時に自動的にQ chatセッションを開始
   useEffect(() => {
@@ -48,53 +55,10 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
     }
   }, [session, sessionStarted]);
 
-  // セッションからの出力を最小限の整形で処理（Thinkingの抑制 + CR進捗処理）
+  // セッションからの出力処理
   useEffect(() => {
-    const bufferRef = { current: '' };
-
-    const handleData = (_type: string, data: string) => {
-      // CRLF正規化（ANSIや色は保持）
-      let merged = (bufferRef.current + data).replace(/\r\n/g, '\n');
-
-      // CR（キャリッジリターン）を利用した進捗行の更新
-      if (merged.includes('\r')) {
-        const crParts = merged.split('\r');
-        const lastPart = crParts[crParts.length - 1];
-        const progressPatterns = [
-          /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏].*\.{3}/, // スピナー + ...
-          /Loading\.\.\./,
-          /Processing\.\.\./,
-          /Downloading|Uploading|Indexing/i
-        ];
-        if (progressPatterns.some(p => p.test(lastPart))) {
-          setCurrentProgressLine(lastPart.trim());
-        }
-        // 最新内容のみを対象にして以降の処理を行う
-        merged = lastPart;
-      }
-
-      const parts = merged.split('\n');
-      const incomplete = parts.pop() || '';
-      const linesToAdd: string[] = [];
-
-      // 改行が来たタイミングで、進捗行が存在すれば1回だけ履歴に残す
-      if (parts.length > 0 && currentProgressLine) {
-        linesToAdd.push(currentProgressLine);
-        setCurrentProgressLine(null);
-      }
-
-      for (const line of parts) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        // Thinking... 系の行は抑制
-        if (trimmed === 'Thinking...' || trimmed.includes('Thinking...')) continue;
-        linesToAdd.push(line);
-      }
-
-      bufferRef.current = incomplete;
-      if (linesToAdd.length > 0) {
-        setOutputLines(prev => [...prev, ...linesToAdd]);
-      }
+    const handleData = (type: string, data: string) => {
+      streamProcessor.processData(type, data);
     };
 
     const handleExit = (code: number) => {
@@ -121,7 +85,7 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
       session.removeListener('exit', handleExit);
       session.removeListener('error', handleError);
     };
-  }, [session]);
+  }, [session, streamProcessor]);
   
   // キーバインドの処理
   useInput((input, key) => {
@@ -147,6 +111,7 @@ export const App: React.FC<AppProps> = ({ version = '0.1.0' }) => {
     if (key.ctrl && input === 'l') {
       setOutputLines([]);
       setErrorCount(0);
+      streamProcessor.clear();
     }
     
     // 上矢印: 履歴を遡る

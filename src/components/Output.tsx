@@ -6,17 +6,15 @@ interface OutputProps {
   height?: number;
 }
 
+/**
+ * 出力表示コンポーネント
+ * 単一責任: Q CLIの出力を表示するだけ
+ */
 export const Output: React.FC<OutputProps> = ({ lines, height }) => {
-  // 表示する行を決定（最新の行を優先表示）
-  let displayLines = lines;
-
-  if (height && height > 0) {
-    const totalLines = lines.length;
-    if (totalLines > height) {
-      const start = totalLines - height;
-      displayLines = lines.slice(start);
-    }
-  }
+  // 高さ指定がある場合は最新の行を優先表示
+  const displayLines = height && height > 0 && lines.length > height
+    ? lines.slice(-height)
+    : lines;
 
   return (
     <Box
