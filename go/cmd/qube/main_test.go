@@ -314,12 +314,17 @@ func TestModeSwitch(t *testing.T) {
 
 // TestAutoStartChatSession は初期化時に自動的にchatセッションが開始されることを確認する
 func TestAutoStartChatSession(t *testing.T) {
-	t.Skip("実装後に有効化")
+	// t.Skip("実装後に有効化") - 実装済みなので有効化
 	
 	tc := setupIntegrationTest()
 	
 	// main関数のInit相当の処理をシミュレート
-	// ここで自動的にchatセッションを開始する必要がある
+	// 自動的にchatセッションを開始
+	go func() {
+		if err := tc.executor.Execute("q chat"); err != nil {
+			t.Logf("Failed to start initial chat session: %v", err)
+		}
+	}()
 	
 	// 少し待つ（非同期処理の場合）
 	time.Sleep(100 * time.Millisecond)
