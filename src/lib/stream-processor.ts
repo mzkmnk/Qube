@@ -72,7 +72,11 @@ export class StreamProcessor {
 
     for (const line of parts) {
       const trimmed = line.trim();
-      if (!trimmed) continue;
+      // 空行は基本的にスキップ
+      if (!trimmed) {
+        // エコーバック直後の空行の可能性があるのでスキップ
+        continue;
+      }
 
       // Thinking... 系の行は履歴に残さず、進捗として表示のみ
       if (/Thinking/i.test(trimmed)) {

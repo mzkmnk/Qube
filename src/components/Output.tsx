@@ -40,7 +40,7 @@ export const Output: React.FC<OutputProps> = ({ lines, height, currentProgressLi
                 borderStyle="single"
                 borderColor="cyan"
                 paddingX={1}
-                marginBottom={1}
+                marginBottom={0}
               >
                 <Text color="cyan">▶ {message}</Text>
               </Box>
@@ -54,7 +54,7 @@ export const Output: React.FC<OutputProps> = ({ lines, height, currentProgressLi
         })}
       {/* Thinking... のスクランブルアニメーション表示 */}
       {currentProgressLine && currentProgressLine.includes("Thinking") && (
-        <Box paddingLeft={1}>
+        <Box marginTop={0} paddingLeft={1}>
           <ScrambleText
             base="Thinking..."
             fps={30}
