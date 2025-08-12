@@ -96,19 +96,7 @@
 - [ ] 目視: 主要ユースケース（help、chat 入出力、エラー系、進捗系）を目視で比較
 - [ ] パフォーマンス/TTY: 主要 OS/端末（macOS/Linux、iTerm/Alacritty/Windows Terminal）で確認
 
-## 11. 配布・ビルド
-- [ ] Go ビルド（`make build` など）で `bin/qube-go` 生成
-- [ ] cross-build（必要なら `goreleaser`）
-- [ ] npm スクリプト追加: `start:go`、`build:go`
-- [ ] README に Go 版の導入/切替手順を追記
-
-## 12. 段階的ロールアウトと削除
-- [ ] 内部ユーザーに Go 版先行配布（バグ収集）
-- [ ] 既知問題 Fix → 再検証
-- [ ] 既定実行を Go 版へ切替（環境変数経由）
-- [ ] 問題なければ Node 実装をリタイア（最終段階で `src/` をアーカイブ/削除）
-
-## 13. 既知のリスクと緩和
+## 11. 既知のリスクと緩和
 - [ ] PTY 差異（macOS/Linux/Windows）→ `creack/pty` の既知事例に合わせ、端末サイズ/改行/エンコーディングを明示
 - [ ] ANSI/VTE 差異 → 可能な限り素通し、UI の色付けは `lipgloss` に限定
 - [ ] スクランブル演出差 → Bubble Tea の Tick 駆動で再現し、負荷/ちらつきを抑制
@@ -137,4 +125,3 @@
 - [ ] 主要 UI 構成（Header, Output, Input, StatusBar）が Node 版と同等の見え方/操作性
 - [ ] `q help` 等の短命コマンドと `chat` セッションの代表シナリオで入出力が一致
 - [ ] 併存起動（Node/Go）が可能で、Go 版に既知のクリティカル欠陥がない
-- [ ] README 更新（切替手順/既知差分/トラブルシュート）
