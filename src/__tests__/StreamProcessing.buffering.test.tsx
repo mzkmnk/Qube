@@ -79,6 +79,10 @@ describe("メッセージバッファリング処理のテスト", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     mockSession = globalMockSession;
+    
+    // セッション初期化完了をシミュレート
+    mockSession?.emit("initialized");
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // When: 文章を分割して送信
     // 短い不完全な文章を送信（改行なし、80文字未満、文末記号なし）
@@ -104,6 +108,10 @@ describe("メッセージバッファリング処理のテスト", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     mockSession = globalMockSession;
+    
+    // セッション初期化完了をシミュレート
+    mockSession?.emit("initialized");
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // When
     mockSession?.emit("data", "stdout", "Line 1\nLine 2\nLine 3\n");
@@ -123,6 +131,10 @@ describe("メッセージバッファリング処理のテスト", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     mockSession = globalMockSession;
+    
+    // セッション初期化完了をシミュレート
+    mockSession?.emit("initialized");
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // When: 文末記号（感嘆符）で終わるデータを送信
     mockSession?.emit("data", "stdout", "Welcome to Amazon Q!");

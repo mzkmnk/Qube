@@ -68,6 +68,10 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
   // セッションからの出力処理
   useEffect(() => {
     const handleData = (type: string, data: string) => {
+      // 初期化が完了するまでの出力は無視する
+      if (!sessionInitialized) {
+        return;
+      }
       streamProcessor.processData(type, data);
     };
 
@@ -106,7 +110,7 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
       session.removeListener("error", handleError);
       session.removeListener("initialized", handleInitialized);
     };
-  }, [session, streamProcessor]);
+  }, [session, streamProcessor, sessionInitialized]);
 
   // コマンド実行エンジンの初期化
   const [commandExecutor] = useState(
