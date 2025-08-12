@@ -159,3 +159,38 @@ func Test_QubeASCII_DisplaysFigletLogo(t *testing.T) {
 		t.Errorf("ASCII art should have multiple lines, got %d lines", len(lines))
 	}
 }
+
+// Output コンポーネントのパリティテスト
+
+func Test_Output_DisplaysUserInputWithFrame(t *testing.T) {
+	// ユーザー入力が枠線付きで表示されることを確認
+	m := New()
+	m.AddUserInput("hello world")
+	
+	output := m.renderOutput()
+	
+	// ユーザー入力のプレフィックスと内容を確認
+	if !strings.Contains(output, "▶") {
+		t.Errorf("Output should contain user input prompt '▶', got: %s", output)
+	}
+	if !strings.Contains(output, "hello world") {
+		t.Errorf("Output should contain user input 'hello world', got: %s", output)
+	}
+}
+
+func Test_Output_DisplaysNormalOutputAsIs(t *testing.T) {
+	// 通常の出力がそのまま表示されることを確認
+	m := New()
+	m.AddOutput("System output line 1")
+	m.AddOutput("System output line 2")
+	
+	output := m.renderOutput()
+	
+	// 通常出力がそのまま含まれていることを確認
+	if !strings.Contains(output, "System output line 1") {
+		t.Errorf("Output should contain normal output line 1, got: %s", output)
+	}
+	if !strings.Contains(output, "System output line 2") {
+		t.Errorf("Output should contain normal output line 2, got: %s", output)
+	}
+}
