@@ -159,6 +159,23 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     return m, nil
 }
 
+// renderQubeASCII はQUBEのASCIIロゴを生成する
+func (m Model) renderQubeASCII() string {
+	// シンプルなASCIIアート（figlet風）
+	ascii := `
+  ___   _   _  ____   _____ 
+ / _ \ | | | ||  _ \ | ____|
+| | | || | | || |_) ||  _|  
+| |_| || |_| ||  _ < | |___ 
+ \__\_\ \___/ |_| \_\|_____|
+                             
+       Q U B E  v0.1.0       `
+	
+	// lipglossでカラー適用
+	logoStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("201")) // マゼンタ
+	return logoStyle.Render(ascii)
+}
+
 // renderHeader はヘッダー部分のレンダリングを行う
 func (m Model) renderHeader() string {
 	// スタイル定義
