@@ -5,8 +5,6 @@
 
 export interface KeyboardCallbacks {
   onExit: () => void;
-  onInterrupt: () => void;
-  onClear: () => void;
   onHistoryUp: () => void;
   onHistoryDown: () => void;
 }
@@ -28,21 +26,9 @@ export class KeyboardHandler {
    * キーボード入力を処理
    */
   handleInput(input: string, key: KeyInfo): void {
-    // Ctrl+D: 終了
-    if (key.ctrl && input === "d") {
+    // Ctrl+C: 終了 (Ctrl+Cのキーコードは\x03)
+    if (input === "\x03" || (key.ctrl && input === "c")) {
       this.callbacks.onExit();
-      return;
-    }
-
-    // Ctrl+C: 中断
-    if (key.ctrl && input === "c") {
-      this.callbacks.onInterrupt();
-      return;
-    }
-
-    // Ctrl+L: クリア
-    if (key.ctrl && input === "l") {
-      this.callbacks.onClear();
       return;
     }
 

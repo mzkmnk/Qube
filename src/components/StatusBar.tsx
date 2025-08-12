@@ -64,7 +64,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       {showHelp && (
         <Box>
           <Text color="gray" dimColor>
-            ^C Stop ^D Exit ^L Clear ↑↓ History
+            ^C Exit ↑↓ History
           </Text>
         </Box>
       )}
