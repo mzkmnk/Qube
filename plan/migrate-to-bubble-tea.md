@@ -80,12 +80,12 @@
   - [x] `onStatusChange`, `onModeChange`, `onOutput`, `onError` の通知
 
 ## 8. UI 細部のパリティ合わせ
-- [ ] Header: タイトル/バージョン/接続インジケータ（●/○ 表現）
-- [ ] QUBE ASCII: figlet 相当（カラーは `lipgloss`）
-- [ ] Output: ユーザー入力は枠線＋`▶` で表示、通常出力は素通し
-- [ ] Thinking: スクランブルアニメーションを再現（Tick/Timer で FPS/強度/混合モードを実装）
-- [ ] Input: Disabled 表示/placeholder 切替、プロンプト `▶/◌` の切替
-- [ ] StatusBar: `mode`（Cmd/Chat）、`status`、`errorCount`、`currentCommand` 省略表示、ヘルプ `^C Exit ↑↓ History`
+- [x] Header: タイトル/バージョン/接続インジケータ（●/○ 表現）
+- [x] QUBE ASCII: figlet 相当（カラーは `lipgloss`）
+- [x] Output: ユーザー入力は枠線＋`▶` で表示、通常出力は素通し
+- [x] Thinking: スクランブルアニメーションを再現（Tick/Timer で FPS/強度/混合モードを実装）
+- [x] Input: Disabled 表示/placeholder 切替、プロンプト `▶/◌` の切替
+- [x] StatusBar: `mode`（Cmd/Chat）、`status`、`errorCount`、`currentCommand` 省略表示、ヘルプ `^C Exit ↑↓ History`
 
 ## 9. 併存検証（開発者向け）
 - [ ] `npm run start:go` で Go 版を起動（開発者ローカルのみ）
