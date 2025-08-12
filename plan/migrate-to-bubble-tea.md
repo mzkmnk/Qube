@@ -67,10 +67,10 @@
 - [x] fixtures/golden と一致するかテスト
 
 ## 6. プロセス実行（短命 / セッション）
-- [ ] `execq.Run(args)` で短命コマンド（標準出力統合、タイムアウト、終了コード）
-- [ ] `session.Start(mode)` で PTY スポーン、`OnData`/`OnExit`/`OnError` の購読
-- [ ] 初期化検知: ANSI 除去 → 正規表現（`You are chatting with` またはセパレーター後空行）
-- [ ] 送信: `session.Send(text + CR)`、停止: `session.Stop()`
+- [x] `execq.Run(args)` で短命コマンド（標準出力統合、タイムアウト、終了コード）
+- [x] `session.Start(mode)` で PTY スポーン、`OnData`/`OnExit`/`OnError` の購読
+- [x] 初期化検知: ANSI 除去 → 正規表現（`You are chatting with` またはセパレーター後空行）
+- [x] 送信: `session.Send(text + CR)`、停止: `session.Stop()`
 
 ## 7. コマンド実行のポーティング
 - [ ] `CommandExecutor` 相当（Go）で `execute(command, mode)` を実装
