@@ -44,7 +44,7 @@
 - [x] ストリーム仕様を言語非依存のサンプルで固定（CR/ANSI/Thinking/途中行）
 - [x] `fixtures/streams/*.txt` を作成（Node 版の `StreamProcessor` を利用して生成）
 - [x] 期待行列（golden）を `fixtures/golden/*.txt` として保存
-- [ ] Go 側 `internal/stream` テストで fixtures を読み、golden と一致を確認
+- [x] Go 側 `internal/stream` テストで fixtures を読み、golden と一致を確認
 
 メモ:
 - 生成スクリプト: `scripts/generate-golden.ts`（`npm run generate:golden`）
