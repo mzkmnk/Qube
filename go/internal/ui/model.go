@@ -82,6 +82,12 @@ type Model struct {
 	progressLine   *string
 	errorCount     int
 	currentCommand string
+	title          string  // アプリケーション名
+	version        string  // バージョン番号
+	connected      bool    // 接続状態
+	inputEnabled   bool    // 入力の有効/無効状態
+	width          int     // ターミナルの幅
+	height         int     // ターミナルの高さ
 }
 
 func New() Model {
@@ -94,13 +100,59 @@ func New() Model {
 		progressLine: nil,
 		errorCount:   0,
 		currentCommand: "",
+		title:        "Qube",
+		version:      "0.1.0",
+		connected:    false,
+		inputEnabled: true,
+		width:        80,  // デフォルト幅
+		height:       24,  // デフォルト高さ
 	}
 }
 
 func (m Model) Init() tea.Cmd { return nil }
 
+// SetTitle はアプリケーションタイトルを設定する
+func (m *Model) SetTitle(title string) {
+	m.title = title
+}
+
+// SetVersion はバージョン番号を設定する
+func (m *Model) SetVersion(version string) {
+	m.version = version
+}
+
+// SetConnected は接続状態を設定する
+func (m *Model) SetConnected(connected bool) {
+	m.connected = connected
+}
+
+// AddUserInput はユーザー入力を履歴に追加する
+func (m *Model) AddUserInput(input string) {
+	m.lines = append(m.lines, "USER_INPUT:"+input)
+}
+
+// AddOutput は通常の出力を履歴に追加する
+func (m *Model) AddOutput(output string) {
+	m.lines = append(m.lines, output)
+}
+
+// SetProgressLine は進捗行を設定する
+func (m *Model) SetProgressLine(line string) {
+	m.progressLine = &line
+}
+
+// SetInputEnabled は入力の有効/無効を設定する
+func (m *Model) SetInputEnabled(enabled bool) {
+	m.inputEnabled = enabled
+}
+
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch v := msg.(type) {
+    case tea.WindowSizeMsg:
+        // ターミナルサイズが変更された時
+        m.width = v.Width
+        m.height = v.Height
+        return m, nil
     case tea.KeyMsg:
         switch v.Type {
         case tea.KeyCtrlC:
@@ -138,32 +190,157 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     return m, nil
 }
 
+// renderQubeASCII はQUBEのASCIIロゴを生成する
+func (m Model) renderQubeASCII() string {
+	// シンプルなASCIIアート（figlet風）
+	ascii := `
+  ___   _   _  ____   _____ 
+ / _ \ | | | ||  _ \ | ____|
+| | | || | | || |_) ||  _|  
+| |_| || |_| ||  _ < | |___ 
+ \__\_\ \___/ |_| \_\|_____|
+                             
+       Q U B E  v0.1.0       `
+	
+	// lipglossでカラー適用
+	logoStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("201")) // マゼンタ
+	return logoStyle.Render(ascii)
+}
+
+// renderOutput は出力部分のレンダリングを行う
+func (m Model) renderOutput() string {
+	var result []string
+	
+	// スタイル定義
+	userStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("14")) // シアン
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("14")).
+		PaddingLeft(1).PaddingRight(1)
+	
+	for _, line := range m.lines {
+		if strings.HasPrefix(line, "USER_INPUT:") {
+			// ユーザー入力は枠線付きで表示
+			message := strings.TrimPrefix(line, "USER_INPUT:")
+			userLine := userStyle.Render("▶ " + message)
+			result = append(result, boxStyle.Render(userLine))
+		} else {
+			// 通常の出力はそのまま表示
+			result = append(result, line)
+		}
+	}
+	
+	// progressLineがある場合は追加
+	if m.progressLine != nil {
+		faintStyle := lipgloss.NewStyle().Faint(true)
+		result = append(result, faintStyle.Render(*m.progressLine))
+	}
+	
+	return strings.Join(result, "\n")
+}
+
+// renderInput は入力部分のレンダリングを行う
+func (m Model) renderInput() string {
+	// スタイル定義 - ターミナル幅に合わせて調整
+	// ボーダーとパディングを考慮して幅を計算（左右ボーダー2文字 + パディング2文字 = 4文字）
+	contentWidth := m.width - 4
+	if contentWidth < 20 {
+		contentWidth = 20 // 最小幅を確保
+	}
+	
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Padding(0, 1).
+		Width(m.width - 2) // ターミナル幅より少し小さく
+	
+	// プロンプトの選択
+	var prompt string
+	if m.inputEnabled {
+		prompt = "▶ "
+	} else {
+		prompt = "◌ "
+	}
+	
+	// 入力フィールドのレンダリング
+	inputField := prompt + m.input
+	
+	// プレースホルダー表示
+	if m.input == "" && !m.inputEnabled {
+		inputField = prompt + lipgloss.NewStyle().Faint(true).Render("(waiting...)")
+	}
+	
+	return boxStyle.Render(inputField)
+}
+
+// renderStatusBar はステータスバー部分のレンダリングを行う
+func (m Model) renderStatusBar() string {
+	// スタイル定義
+	faint := lipgloss.NewStyle().Faint(true)
+	
+	// コマンドの省略表示（20文字まで）
+	cmd := m.currentCommand
+	if len(cmd) > 20 {
+		cmd = cmd[:17] + "..."
+	}
+	
+	// ヘルプテキスト
+	help := "^C Exit  ↑↓ History  Enter Send"
+	
+	// ステータスバーの組み立て
+	statusBar := fmt.Sprintf("Mode:%s  Status:%s  Errors:%d  Cmd:%s  %s",
+		m.modeStringShort(),
+		m.statusStringShort(),
+		m.errorCount,
+		cmd,
+		help,
+	)
+	
+	return faint.Render(statusBar)
+}
+
+// renderHeader はヘッダー部分のレンダリングを行う
+func (m Model) renderHeader() string {
+	// スタイル定義
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("201")) // マゼンタ
+	versionStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8")) // グレー
+	connectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("10")) // 緑
+	disconnectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("11")) // 黄色
+	
+	// タイトルとバージョン
+	titlePart := fmt.Sprintf("◆ %s", titleStyle.Render(m.title))
+	versionPart := versionStyle.Render(fmt.Sprintf("v%s", m.version))
+	
+	// 接続インジケータ
+	var connectionPart string
+	if m.connected {
+		connectionPart = connectedStyle.Render("● Connected")
+	} else {
+		connectionPart = disconnectedStyle.Render("○ Connecting...")
+	}
+	
+	// ヘッダー行を組み立て
+	header := fmt.Sprintf("%s %s                    %s", titlePart, versionPart, connectionPart)
+	
+	return header
+}
+
 func (m Model) View() string {
-    // スタイル定義
-    headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12"))
-    boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(0, 1)
-    faint := lipgloss.NewStyle().Faint(true)
-
     // ヘッダー
-    header := headerStyle.Render(fmt.Sprintf("Qube • %s • %s", m.modeString(), m.statusString()))
+    header := m.renderHeader()
+    
+    // ASCIIロゴ
+    ascii := m.renderQubeASCII()
 
-    // 出力（履歴 + 進捗行）
-    bodyLines := make([]string, 0, len(m.lines)+1)
-    bodyLines = append(bodyLines, m.lines...)
-    if m.progressLine != nil {
-        bodyLines = append(bodyLines, faint.Render(*m.progressLine))
-    }
-    body := boxStyle.Render(strings.Join(bodyLines, "\n"))
+    // 出力
+    output := m.renderOutput()
 
     // 入力
-    prompt := "▶ "
-    input := boxStyle.Render(prompt + m.input)
+    input := m.renderInput()
 
     // ステータスバー
-    help := "^C Exit  ↑↓ History  Enter Send"
-    statusBar := faint.Render(fmt.Sprintf("Mode:%s  Status:%s  Errors:%d  %s", m.modeStringShort(), m.statusStringShort(), m.errorCount, help))
+    statusBar := m.renderStatusBar()
 
-    return strings.Join([]string{header, body, input, statusBar}, "\n")
+    return strings.Join([]string{header, ascii, output, input, statusBar}, "\n")
 }
 
 // 描画用の表記変換ヘルパ

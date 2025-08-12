@@ -80,26 +80,35 @@
   - [x] `onStatusChange`, `onModeChange`, `onOutput`, `onError` の通知
 
 ## 8. UI 細部のパリティ合わせ
-- [ ] Header: タイトル/バージョン/接続インジケータ（●/○ 表現）
-- [ ] QUBE ASCII: figlet 相当（カラーは `lipgloss`）
-- [ ] Output: ユーザー入力は枠線＋`▶` で表示、通常出力は素通し
-- [ ] Thinking: スクランブルアニメーションを再現（Tick/Timer で FPS/強度/混合モードを実装）
-- [ ] Input: Disabled 表示/placeholder 切替、プロンプト `▶/◌` の切替
-- [ ] StatusBar: `mode`（Cmd/Chat）、`status`、`errorCount`、`currentCommand` 省略表示、ヘルプ `^C Exit ↑↓ History`
+- [x] Header: タイトル/バージョン/接続インジケータ（●/○ 表現）
+- [x] QUBE ASCII: figlet 相当（カラーは `lipgloss`）
+- [x] Output: ユーザー入力は枠線＋`▶` で表示、通常出力は素通し
+- [x] Thinking: スクランブルアニメーションを再現（Tick/Timer で FPS/強度/混合モードを実装）
+- [x] Input: Disabled 表示/placeholder 切替、プロンプト `▶/◌` の切替
+- [x] StatusBar: `mode`（Cmd/Chat）、`status`、`errorCount`、`currentCommand` 省略表示、ヘルプ `^C Exit ↑↓ History`
 
-## 9. 併存検証（開発者向け）
+## 9. UIとバックエンドの統合
+- [ ] main.go に CommandExecutor の初期化と起動処理を追加
+- [ ] UI の MsgSubmit を CommandExecutor.Execute() に接続
+- [ ] CommandExecutor の出力イベントを UI の Update に伝播
+- [ ] セッション出力のストリーミング表示（OnData → AddOutput）
+- [ ] エラーハンドリング（OnError → errorCount 増加、status 更新）
+- [ ] モード切替の実装（command/session の自動判定）
+- [ ] 初期化時の自動 chat セッション開始
+
+## 10. 併存検証（開発者向け）
 - [ ] `npm run start:go` で Go 版を起動（開発者ローカルのみ）
 - [ ] Node 版と Go 版を同一マシンで起動し、主要シナリオを目視比較
 - [ ] 切替手段（環境変数/フォールスルー等）の導入は不要（配布前提でないため）
 
-## 10. テスト戦略（段階）
+## 11. テスト戦略（段階）
 - [ ] 単体: `internal/*` を Go 側でテスト（ストリーム処理・履歴・検出・実行）
 - [ ] フィクスチャ: Node 生成の golden と Go 出力の突き合わせ
 - [ ] 結合: `tea.Program` で UI + session/exec の統合テスト（疑似セッション）
 - [ ] 目視: 主要ユースケース（help、chat 入出力、エラー系、進捗系）を目視で比較
 - [ ] パフォーマンス/TTY: 主要 OS/端末（macOS/Linux、iTerm/Alacritty/Windows Terminal）で確認
 
-## 11. 既知のリスクと緩和
+## 12. 既知のリスクと緩和
 - [ ] PTY 差異（macOS/Linux/Windows）→ `creack/pty` の既知事例に合わせ、端末サイズ/改行/エンコーディングを明示
 - [ ] ANSI/VTE 差異 → 可能な限り素通し、UI の色付けは `lipgloss` に限定
 - [ ] スクランブル演出差 → Bubble Tea の Tick 駆動で再現し、負荷/ちらつきを抑制
