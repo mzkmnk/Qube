@@ -73,11 +73,11 @@
 - [x] 送信: `session.Send(text + CR)`、停止: `session.Stop()`
 
 ## 7. コマンド実行のポーティング
-- [ ] `CommandExecutor` 相当（Go）で `execute(command, mode)` を実装
-  - [ ] `q chat|translate` は `mode=session; session.Start(type)`
-  - [ ] `mode=session && running` は `session.Send`
-  - [ ] それ以外は `execq.Run`（`q` の prefix 除去含む）
-  - [ ] `onStatusChange`, `onModeChange`, `onOutput`, `onError` の通知
+- [x] `CommandExecutor` 相当（Go）で `execute(command, mode)` を実装
+  - [x] `q chat|translate` は `mode=session; session.Start(type)`
+  - [x] `mode=session && running` は `session.Send`
+  - [x] それ以外は `execq.Run`（`q` の prefix 除去含む）
+  - [x] `onStatusChange`, `onModeChange`, `onOutput`, `onError` の通知
 
 ## 8. UI 細部のパリティ合わせ
 - [ ] Header: タイトル/バージョン/接続インジケータ（●/○ 表現）
