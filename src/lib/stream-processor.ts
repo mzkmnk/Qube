@@ -14,6 +14,8 @@ export class StreamProcessor {
   // Thinking... を一時的に表示するフラグ（履歴には残さない）
   private thinkingActive = false;
   private config: StreamProcessorConfig;
+  // 最後に送信したコマンド（エコーバックフィルタリング用）
+  private lastSentCommand: string | null = null;
 
   constructor(config: StreamProcessorConfig) {
     this.config = config;
@@ -87,6 +89,13 @@ export class StreamProcessor {
         this.config.onProgressUpdate(null);
       }
 
+      // ユーザー入力のエコーバックをフィルタリング
+      // PTYからのエコーバックは送信したコマンドと完全一致する
+      if (this.lastSentCommand && trimmed === this.lastSentCommand) {
+        this.lastSentCommand = null; // 一度フィルタリングしたらリセット
+        continue;
+      }
+
       linesToAdd.push(line);
     }
 
@@ -105,10 +114,18 @@ export class StreamProcessor {
   }
 
   /**
+   * 最後に送信したコマンドを設定（エコーバックフィルタリング用）
+   */
+  setLastSentCommand(command: string): void {
+    this.lastSentCommand = command.trim();
+  }
+
+  /**
    * バッファをクリア
    */
   clear(): void {
     this.buffer = "";
     this.currentProgressLine = null;
+    this.lastSentCommand = null;
   }
 }

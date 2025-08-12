@@ -186,6 +186,9 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
     // ユーザー入力を履歴に表示（枠組み付きで表示されるようにプレフィックスを付ける）
     setOutputLines((prev) => [...prev, `USER_INPUT:${command}`]);
 
+    // エコーバックフィルタリング用に最後に送信したコマンドを設定
+    streamProcessor.setLastSentCommand(command);
+
     // 入力欄をクリアし、実行中コマンドを記録
     setInputValue("");
     setCurrentCommand(command);
@@ -212,10 +215,8 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
       <QubeTitle />
       
       <Output
-        lines={[
-          ...outputLines,
-          ...(currentProgressLine ? [currentProgressLine] : []),
-        ]}
+        lines={outputLines}
+        currentProgressLine={currentProgressLine}
       />
       <Input
         value={inputValue}

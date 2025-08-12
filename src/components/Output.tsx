@@ -1,16 +1,18 @@
 import React from "react";
 import { Box, Text } from "ink";
+import { ScrambleText } from "./ScrambleText";
 
 interface OutputProps {
   lines: string[];
   height?: number;
+  currentProgressLine?: string | null;
 }
 
 /**
  * 出力表示コンポーネント
  * 単一責任: Q CLIの出力を表示するだけ
  */
-export const Output: React.FC<OutputProps> = ({ lines, height }) => {
+export const Output: React.FC<OutputProps> = ({ lines, height, currentProgressLine }) => {
   // 高さ指定がある場合は最新の行を優先表示
   const displayLines =
     height && height > 0 && lines.length > height
@@ -34,7 +36,7 @@ export const Output: React.FC<OutputProps> = ({ lines, height }) => {
             const message = line.replace("USER_INPUT:", "").trim();
             return (
               <Box
-                key={`${index}-${line.substring(0, 20)}`}
+                key={`user-${index}-${message.substring(0, 10)}`}
                 borderStyle="single"
                 borderColor="cyan"
                 paddingX={1}
@@ -46,10 +48,22 @@ export const Output: React.FC<OutputProps> = ({ lines, height }) => {
           } else {
             // 通常の出力
             return (
-              <Text key={`${index}-${line.substring(0, 20)}`}>{line}</Text>
+              <Text key={`output-${index}-${line.substring(0, 20)}`}>{line}</Text>
             );
           }
         })}
+      {/* Thinking... のスクランブルアニメーション表示 */}
+      {currentProgressLine && currentProgressLine.includes("Thinking") && (
+        <Box paddingLeft={1}>
+          <ScrambleText
+            base="Thinking..."
+            fps={30}
+            intensity={0.4}
+            mode="mixed"
+            color="yellow"
+          />
+        </Box>
+      )}
     </Box>
   );
 };
