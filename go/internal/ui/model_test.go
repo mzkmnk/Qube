@@ -139,3 +139,23 @@ func Test_Header_ShowsConnectionIndicator(t *testing.T) {
 		t.Errorf("Header should show connected indicator, got: %s", view)
 	}
 }
+
+// QUBE ASCII ロゴのパリティテスト
+
+func Test_QubeASCII_DisplaysFigletLogo(t *testing.T) {
+	// QUBE ASCIIロゴが表示されることを確認
+	m := New()
+	ascii := m.renderQubeASCII()
+	
+	// ASCIIアートに "QUBE" の文字が含まれていることを確認
+	if !strings.Contains(ascii, "Q") || !strings.Contains(ascii, "U") || 
+	   !strings.Contains(ascii, "B") || !strings.Contains(ascii, "E") {
+		t.Errorf("ASCII art should contain QUBE letters, got: %s", ascii)
+	}
+	
+	// ASCIIアートが複数行であることを確認（figletの特徴）
+	lines := strings.Split(ascii, "\n")
+	if len(lines) < 3 {
+		t.Errorf("ASCII art should have multiple lines, got %d lines", len(lines))
+	}
+}
