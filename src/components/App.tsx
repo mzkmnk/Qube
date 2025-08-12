@@ -4,6 +4,7 @@ import { Header } from "./Header";
 import { Output } from "./Output";
 import { Input } from "./Input";
 import { StatusBar } from "./StatusBar";
+import { QubeTitle } from "./QubeTitle";
 import { CommandHistory } from "../lib/history";
 import { QSession } from "../lib/q-session";
 import { StreamProcessor } from "../lib/stream-processor";
@@ -28,6 +29,7 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
   const [history] = useState(() => new CommandHistory());
   const [session] = useState(() => new QSession());
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [sessionInitialized, setSessionInitialized] = useState(false);
   const [currentProgressLine, setCurrentProgressLine] = useState<string | null>(
     null,
   );
@@ -49,9 +51,7 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
           setStatus("running");
           await session.start("chat");
           setSessionStarted(true);
-          setStatus("ready");
-          // 初期メッセージは表示しない（Qからのメッセージのみ表示）
-          setOutputLines((prev) => [...prev]);
+          // 初期化完了は initialized イベントでハンドル
         } catch (error) {
           setOutputLines((prev) => [
             ...prev,
@@ -86,14 +86,25 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
       setErrorCount((prev) => prev + 1);
     };
 
+    const handleInitialized = () => {
+      setSessionInitialized(true);
+      setStatus("ready");
+      // 初期化完了時に画面をクリア
+      clearTerminal({ scrollback: true });
+      streamProcessor.clear();
+      setOutputLines([]);
+    };
+
     session.on("data", handleData);
     session.on("exit", handleExit);
     session.on("error", handleError);
+    session.on("initialized", handleInitialized);
 
     return () => {
       session.removeListener("data", handleData);
       session.removeListener("exit", handleExit);
       session.removeListener("error", handleError);
+      session.removeListener("initialized", handleInitialized);
     };
   }, [session, streamProcessor]);
 
@@ -194,8 +205,12 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
       <Header
         title="Qube"
         version={version}
-        connected={sessionStarted && session.running}
+        connected={sessionInitialized && session.running}
       />
+      
+      {/* QUBEロゴを常に表示 */}
+      <QubeTitle />
+      
       <Output
         lines={[
           ...outputLines,
@@ -204,8 +219,8 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
       />
       <Input
         value={inputValue}
-        placeholder="Enter Q command..."
-        disabled={status === "running" && mode === "command"}
+        placeholder={!sessionInitialized ? "Initializing..." : "Enter Q command..."}
+        disabled={!sessionInitialized || (status === "running" && mode === "command")}
         onChange={setInputValue}
         onSubmit={handleSubmit}
       />

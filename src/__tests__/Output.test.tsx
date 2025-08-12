@@ -16,8 +16,8 @@ describe("Output コンポーネント", () => {
   it("空の配列の場合、何も表示しない", () => {
     const { lastFrame } = render(<Output lines={[]} />);
 
-    // Waiting for output... が表示される
-    expect(lastFrame()).toContain("Waiting for output...");
+    // 何も表示されない
+    expect(lastFrame()).toBe("");
   });
 
   it("高さが指定されている場合、その高さで表示される", () => {
