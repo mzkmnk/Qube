@@ -9,6 +9,7 @@ import { QSession } from "../lib/q-session";
 import { StreamProcessor } from "../lib/stream-processor";
 import { KeyboardHandler } from "../lib/keyboard-handler";
 import { CommandExecutor } from "../lib/command-executor";
+import { clearTerminal } from "../lib/terminal";
 
 interface AppProps {
   version?: string;
@@ -140,6 +141,7 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
           }
         },
         onClear: () => {
+          clearTerminal({ scrollback: true });
           setOutputLines([]);
           setErrorCount(0);
           streamProcessor.clear();
