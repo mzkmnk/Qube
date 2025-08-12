@@ -82,12 +82,10 @@
 - [ ] Input: Disabled 表示/placeholder 切替、プロンプト `▶/◌` の切替
 - [ ] StatusBar: `mode`（Cmd/Chat）、`status`、`errorCount`、`currentCommand` 省略表示、ヘルプ `^C Exit ↑↓ History`
 
-## 9. 併存と切替戦略
-- [ ] Go バイナリ名: `qube-go`（初期段階は別名、並行利用）
-- [ ] Node 版から `npm run start:go`（`./bin/qube-go`）で起動できるスクリプトを用意
-- [ ] 並行期間は Node 版の e2e 操作と Go 版の画面を目視比較（主要シナリオ）
-- [ ] `QUBE_RUNTIME=go` 環境変数で `bin/qube` が Go 版をフォールスルー起動（最終段階）
-- [ ] 切替前に Node 版を fallback に残す（安全ネット）
+## 9. 併存検証（開発者向け）
+- [ ] `npm run start:go` で Go 版を起動（開発者ローカルのみ）
+- [ ] Node 版と Go 版を同一マシンで起動し、主要シナリオを目視比較
+- [ ] 切替手段（環境変数/フォールスルー等）の導入は不要（配布前提でないため）
 
 ## 10. テスト戦略（段階）
 - [ ] 単体: `internal/*` を Go 側でテスト（ストリーム処理・履歴・検出・実行）
