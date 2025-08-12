@@ -3,7 +3,6 @@ package execq
 import (
     "context"
     "errors"
-    "os/exec"
     "runtime"
     "strings"
     "testing"
@@ -34,7 +33,7 @@ func Test_Run_Success_OutputAndExitCode(t *testing.T) {
 
 func Test_Run_CombinedStdoutStderr(t *testing.T) {
     requireUnix(t)
-    out, code, err := Run([]string{"sh", "-c", "echo out; echo err 1>&2"}, 5*time.Second)
+    out, code, err := Run([]string{"/bin/sh", "-c", "echo out; echo err 1>&2"}, 5*time.Second)
     if err != nil {
         t.Fatalf("unexpected error: %v", err)
     }
@@ -50,7 +49,7 @@ func Test_Run_CombinedStdoutStderr(t *testing.T) {
 func Test_Run_Timeout(t *testing.T) {
     requireUnix(t)
     start := time.Now()
-    out, code, err := Run([]string{"sh", "-c", "sleep 2; echo done"}, 300*time.Millisecond)
+    out, code, err := Run([]string{"/bin/sh", "-c", "sleep 2; echo done"}, 300*time.Millisecond)
     if err == nil {
         t.Fatalf("expected timeout error, got nil")
     }
@@ -70,7 +69,7 @@ func Test_Run_Timeout(t *testing.T) {
 
 func Test_Run_NonZeroExitCode(t *testing.T) {
     requireUnix(t)
-    out, code, err := Run([]string{"sh", "-c", "echo err 1>&2; exit 7"}, 5*time.Second)
+    out, code, err := Run([]string{"/bin/sh", "-c", "echo err 1>&2; exit 7"}, 5*time.Second)
     if err == nil {
         t.Fatalf("expected error for non-zero exit, got nil")
     }
@@ -85,4 +84,3 @@ func Test_Run_NonZeroExitCode(t *testing.T) {
         t.Fatalf("combined output mismatch: %q", out)
     }
 }
-
