@@ -194,3 +194,72 @@ func Test_Output_DisplaysNormalOutputAsIs(t *testing.T) {
 		t.Errorf("Output should contain normal output line 2, got: %s", output)
 	}
 }
+
+// Thinking アニメーションのパリティテスト
+
+func Test_Thinking_ShowsProgressLine(t *testing.T) {
+	// Thinking表示時にprogressLineが設定されることを確認
+	m := New()
+	m.SetProgressLine("Thinking...")
+	
+	output := m.renderOutput()
+	
+	// Thinkingが含まれていることを確認
+	if !strings.Contains(output, "Thinking") {
+		t.Errorf("Output should contain 'Thinking' progress, got: %s", output)
+	}
+}
+
+// Input コンポーネントのパリティテスト
+
+func Test_Input_ShowsProperPromptAndPlaceholder(t *testing.T) {
+	// 適切なプロンプトとプレースホルダーが表示されることを確認
+	m := New()
+	
+	// アクティブ状態
+	m.SetInputEnabled(true)
+	input := m.renderInput()
+	if !strings.Contains(input, "▶") {
+		t.Errorf("Active input should show '▶' prompt, got: %s", input)
+	}
+	
+	// 無効状態
+	m.SetInputEnabled(false)
+	input = m.renderInput()
+	if !strings.Contains(input, "◌") {
+		t.Errorf("Disabled input should show '◌' prompt, got: %s", input)
+	}
+}
+
+// StatusBar コンポーネントのパリティテスト
+
+func Test_StatusBar_ShowsModeAndStatus(t *testing.T) {
+	// StatusBarがmode、status、errorCount、ヘルプを表示することを確認
+	m := New()
+	m.mode = ModeSession
+	m.status = StatusRunning
+	m.errorCount = 2
+	m.currentCommand = "q chat"
+	
+	statusBar := m.renderStatusBar()
+	
+	// モードの確認
+	if !strings.Contains(statusBar, "Chat") {
+		t.Errorf("StatusBar should show mode 'Chat', got: %s", statusBar)
+	}
+	
+	// ステータスの確認
+	if !strings.Contains(statusBar, "running") {
+		t.Errorf("StatusBar should show status 'running', got: %s", statusBar)
+	}
+	
+	// エラーカウントの確認
+	if !strings.Contains(statusBar, "2") {
+		t.Errorf("StatusBar should show error count '2', got: %s", statusBar)
+	}
+	
+	// ヘルプの確認
+	if !strings.Contains(statusBar, "^C Exit") || !strings.Contains(statusBar, "↑↓ History") {
+		t.Errorf("StatusBar should show help text, got: %s", statusBar)
+	}
+}
