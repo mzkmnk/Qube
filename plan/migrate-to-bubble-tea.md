@@ -53,7 +53,7 @@
 
 ## 4. 最小 UI プロトタイプ（Go）
 - [x] `tea.Model` で `state {mode,status,input,history,lines,progressLine,errorCount,currentCommand}` を定義
-- [ ] Header/StatusBar/Output/Input の最小実装（色/枠は lipgloss で近似）
+- [x] Header/StatusBar/Output/Input の最小実装（色/枠は lipgloss で近似）
 - [x] Enter で `MsgSubmit(value)`、↑↓ で履歴移動（`CommandHistory` 相当を Go 実装）
 - [x] Ctrl+C ハンドリング（`tea.Quit`）
 

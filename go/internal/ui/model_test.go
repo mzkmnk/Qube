@@ -65,22 +65,22 @@ func Test_Update_UpDownHistoryNavigation(t *testing.T) {
 	m.history.Add("one")
 	m.history.Add("two")
 
-	// Up -> two
+    // 上矢印: two へ
 	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
 	if m.input != "two" {
 		t.Fatalf("after 1x Up: got %q, want %q", m.input, "two")
 	}
-	// Up -> one
+    // 上矢印: one へ
 	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
 	if m.input != "one" {
 		t.Fatalf("after 2x Up: got %q, want %q", m.input, "one")
 	}
-	// Down -> two
+    // 下矢印: two へ
 	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
 	if m.input != "two" {
 		t.Fatalf("after Down: got %q, want %q", m.input, "two")
 	}
-	// Down -> ""
+    // 下矢印: 空文字 へ
 	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
 	if m.input != "" {
 		t.Fatalf("after 2x Down: got %q, want empty", m.input)
