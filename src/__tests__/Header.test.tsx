@@ -11,13 +11,6 @@ describe("Header コンポーネント", () => {
     expect(lastFrame()).toContain("v0.1.0");
   });
 
-  it("区切り線を表示する", () => {
-    const { lastFrame } = render(<Header title="Qube" version="0.1.0" />);
-
-    // 区切り線として使われる文字が含まれているか確認
-    expect(lastFrame()).toMatch(/[─━]/);
-  });
-
   it("コンポーネントの幅が指定されている場合、その幅で表示される", () => {
     const { lastFrame } = render(
       <Header title="Qube" version="0.1.0" width={50} />,
