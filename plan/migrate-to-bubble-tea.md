@@ -26,19 +26,19 @@
 - [x] 見た目: Header/StatusBar/枠線/色（できる限り類似）、figlet ロゴ相当
 
 ## 2. アーキテクチャ設計（Go 側構成）
-- [ ] Go モジュール: `go.mod`、パッケージ構成（例）
-  - `cmd/qube/`（エントリ）
-  - `internal/ui/`（Bubble Tea model + view: header/output/input/status）
-  - `internal/session/`（PTY セッション、初期化検知、イベント発火）
-  - `internal/execq/`（短命コマンド、LookPath 検出、タイムアウト）
-  - `internal/stream/`（StreamProcessor 移植）
-  - `internal/keys/`（キーバインド）
-  - `internal/ascii/`（figlet 代替: go-figure など）
-- [ ] 主要ライブラリ選定
-  - [ ] UI: `github.com/charmbracelet/bubbletea`、`bubbles/textinput`、`lipgloss`
-  - [ ] PTY: `github.com/creack/pty`（インタラクティブセッション）
-  - [ ] 実行: `os/exec` + `exec.CommandContext`（短命）、`exec.LookPath`（検出）
-  - [ ] ASCII: `github.com/common-nighthawk/go-figure` など
+- [x] Go モジュール: `go.mod`、パッケージ構成（例）
+  - [x] `cmd/qube/`（エントリ）
+  - [x] `internal/ui/`（Bubble Tea model + view: header/output/input/status）
+  - [x] `internal/session/`（PTY セッション、初期化検知、イベント発火）
+  - [x] `internal/execq/`（短命コマンド、LookPath 検出、タイムアウト）
+  - [x] `internal/stream/`（StreamProcessor 移植）
+  - [x] `internal/keys/`（キーバインド）
+  - [x] `internal/ascii/`（figlet 代替: go-figure など）
+- [x] 主要ライブラリ選定
+  - [x] UI: `github.com/charmbracelet/bubbletea`、`bubbles/textinput`、`lipgloss`
+  - [x] PTY: `github.com/creack/pty`（インタラクティブセッション）
+  - [x] 実行: `os/exec` + `exec.CommandContext`（短命）、`exec.LookPath`（検出）
+  - [x] ASCII: `github.com/common-nighthawk/go-figure` など
 
 ## 3. 仕様の抽出と共通フィクスチャ（デグレ防止）
 - [ ] ストリーム仕様を言語非依存のサンプルで固定（CR/ANSI/Thinking/途中行）
