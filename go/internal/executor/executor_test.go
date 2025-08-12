@@ -103,36 +103,6 @@ func TestCommandExecutor_Execute_ChatCommand(t *testing.T) {
 	assert.Contains(t, listener.StatusChanges, "running")
 }
 
-func TestCommandExecutor_Execute_TranslateCommand(t *testing.T) {
-	// q translateコマンドでセッションを開始する
-	session := new(mockSession)
-	execQ := new(mockExecQ)
-	listener := &EventListener{}
-
-	session.On("Start", "translate").Return(nil)
-
-	executor := &CommandExecutor{
-		session:        session,
-		execQ:          execQ,
-		mode:           "command",
-		status:         "ready",
-		onStatusChange: listener.OnStatusChange,
-		onModeChange:   listener.OnModeChange,
-		onOutput:       listener.OnOutput,
-		onError:        listener.OnError,
-	}
-
-	// q translateコマンドを実行
-	err := executor.Execute("q translate")
-
-	// アサーション
-	assert.NoError(t, err)
-	session.AssertExpectations(t)
-	
-	// モードがsessionに変更されたことを確認
-	assert.Equal(t, "session", executor.mode)
-	assert.Contains(t, listener.ModeChanges, "session")
-}
 
 func TestCommandExecutor_Execute_SessionSend(t *testing.T) {
 	// セッション中にコマンドを送信する

@@ -96,9 +96,9 @@ func (c *CommandExecutor) Execute(command string) error {
 	// "q" プレフィックスの処理
 	isQCommand := parts[0] == "q"
 	if isQCommand && len(parts) > 1 {
-		// q chat または q translate の場合はセッションを開始
-		if parts[1] == "chat" || parts[1] == "translate" {
-			return c.startSession(parts[1])
+		// q chat の場合はセッションを開始
+		if parts[1] == "chat" {
+			return c.startSession("chat")
 		}
 		// その他のqコマンドは短命コマンドとして実行
 		return c.runShortLivedCommand(parts[1:])
@@ -108,7 +108,7 @@ func (c *CommandExecutor) Execute(command string) error {
 	return c.runShortLivedCommand(parts)
 }
 
-// startSession はセッションを開始する
+// startSession はchatセッションを開始する
 func (c *CommandExecutor) startSession(sessionType string) error {
 	// ステータスをrunningに変更
 	c.setStatus("running")
