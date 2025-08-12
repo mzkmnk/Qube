@@ -71,6 +71,19 @@ func (h *History) Next() (string, bool) {
 	return h.items[h.pointer], true
 }
 
+// CommandExecutorInterface はコマンド実行を抽象化するインターフェース
+type CommandExecutorInterface interface {
+	Execute(command string) error
+	SetEventHandlers(
+		onStatusChange func(string),
+		onModeChange func(string),
+		onOutput func(string),
+		onError func(error),
+	)
+	GetMode() string
+	GetStatus() string
+}
+
 // Model は最小プロトタイプに必要な UI の状態を保持する。
 
 type Model struct {
@@ -88,6 +101,7 @@ type Model struct {
 	inputEnabled   bool    // 入力の有効/無効状態
 	width          int     // ターミナルの幅
 	height         int     // ターミナルの高さ
+	executor       CommandExecutorInterface // コマンド実行を管理
 }
 
 func New() Model {
@@ -106,6 +120,55 @@ func New() Model {
 		inputEnabled: true,
 		width:        80,  // デフォルト幅
 		height:       24,  // デフォルト高さ
+		executor:     nil, // 後でSetExecutorで設定
+	}
+}
+
+// NewWithExecutor はCommandExecutorを指定してModelを作成する
+func NewWithExecutor(executor CommandExecutorInterface) Model {
+	m := New()
+	m.SetExecutor(executor)
+	return m
+}
+
+// SetExecutor はCommandExecutorを設定し、イベントハンドラーを登録する
+func (m *Model) SetExecutor(executor CommandExecutorInterface) {
+	m.executor = executor
+	if executor != nil {
+		// イベントハンドラーを設定
+		executor.SetEventHandlers(
+			// onStatusChange
+			func(status string) {
+				switch status {
+				case "ready":
+					m.SetStatus(StatusReady)
+					m.SetInputEnabled(true)
+				case "running":
+					m.SetStatus(StatusRunning)
+					m.SetInputEnabled(false)
+				case "error":
+					m.SetStatus(StatusError)
+					m.SetInputEnabled(true)
+				}
+			},
+			// onModeChange
+			func(mode string) {
+				if mode == "session" {
+					m.SetMode(ModeSession)
+				} else {
+					m.SetMode(ModeCommand)
+				}
+			},
+			// onOutput
+			func(output string) {
+				m.AddOutput(output)
+			},
+			// onError
+			func(err error) {
+				m.IncrementErrorCount()
+				m.AddOutput("Error: " + err.Error())
+			},
+		)
 	}
 }
 
@@ -188,6 +251,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.width = v.Width
         m.height = v.Height
         return m, nil
+    case MsgSubmit:
+        // MsgSubmitを受け取った時にCommandExecutorを呼び出す
+        if m.executor != nil {
+            m.SetCurrentCommand(v.Value)
+            go func() {
+                _ = m.executor.Execute(v.Value)
+            }()
+        }
+        return m, nil
     case tea.KeyMsg:
         switch v.Type {
         case tea.KeyCtrlC:
@@ -197,6 +269,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             if text == "" { return m, nil }
             m.history.Add(text)
             m.input = ""
+            // ユーザー入力を表示に追加
+            m.AddUserInput(text)
             return m, func() tea.Msg { return MsgSubmit{Value: text} }
         case tea.KeyBackspace, tea.KeyCtrlH:
             // バックスペースで末尾 1 文字（rune）を削除
