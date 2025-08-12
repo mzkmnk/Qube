@@ -15,7 +15,7 @@ describe("KeyboardHandler", () => {
       // Act - Ctrl+Cの両方のパターンをテスト
       handler.handleInput("c", { ctrl: true });
       expect(mockCallbacks.onExit).toHaveBeenCalledTimes(1);
-      
+
       mockCallbacks.onExit.mockClear();
       handler.handleInput("\x03", {});
       expect(mockCallbacks.onExit).toHaveBeenCalledTimes(1);

@@ -65,7 +65,6 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
     }
   }, [session, sessionStarted]);
 
-
   // セッションからの出力処理
   useEffect(() => {
     const handleData = (type: string, data: string) => {

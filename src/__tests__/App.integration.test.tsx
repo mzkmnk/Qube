@@ -19,7 +19,7 @@ vi.mock("../../lib/q-session", async () => {
       this.running = false;
     }
 
-    send(): void { }
+    send(): void {}
 
     getInitializationBuffer(): string[] {
       return [];
@@ -61,7 +61,7 @@ vi.mock("figlet", () => {
 // 依存のモックを定義した後にアプリとレンダラを読み込む
 import React from "react";
 import { render } from "ink-testing-library";
-import { App } from '../components/App';
+import { App } from "../components/App";
 
 describe("App 統合テスト", () => {
   beforeEach(() => {
