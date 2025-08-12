@@ -82,6 +82,9 @@ type Model struct {
 	progressLine   *string
 	errorCount     int
 	currentCommand string
+	title          string  // アプリケーション名
+	version        string  // バージョン番号
+	connected      bool    // 接続状態
 }
 
 func New() Model {
@@ -94,10 +97,28 @@ func New() Model {
 		progressLine: nil,
 		errorCount:   0,
 		currentCommand: "",
+		title:        "Qube",
+		version:      "0.1.0",
+		connected:    false,
 	}
 }
 
 func (m Model) Init() tea.Cmd { return nil }
+
+// SetTitle はアプリケーションタイトルを設定する
+func (m *Model) SetTitle(title string) {
+	m.title = title
+}
+
+// SetVersion はバージョン番号を設定する
+func (m *Model) SetVersion(version string) {
+	m.version = version
+}
+
+// SetConnected は接続状態を設定する
+func (m *Model) SetConnected(connected bool) {
+	m.connected = connected
+}
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch v := msg.(type) {
@@ -138,14 +159,39 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     return m, nil
 }
 
+// renderHeader はヘッダー部分のレンダリングを行う
+func (m Model) renderHeader() string {
+	// スタイル定義
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("201")) // マゼンタ
+	versionStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8")) // グレー
+	connectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("10")) // 緑
+	disconnectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("11")) // 黄色
+	
+	// タイトルとバージョン
+	titlePart := fmt.Sprintf("◆ %s", titleStyle.Render(m.title))
+	versionPart := versionStyle.Render(fmt.Sprintf("v%s", m.version))
+	
+	// 接続インジケータ
+	var connectionPart string
+	if m.connected {
+		connectionPart = connectedStyle.Render("● Connected")
+	} else {
+		connectionPart = disconnectedStyle.Render("○ Connecting...")
+	}
+	
+	// ヘッダー行を組み立て
+	header := fmt.Sprintf("%s %s                    %s", titlePart, versionPart, connectionPart)
+	
+	return header
+}
+
 func (m Model) View() string {
     // スタイル定義
-    headerStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12"))
     boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(0, 1)
     faint := lipgloss.NewStyle().Faint(true)
 
     // ヘッダー
-    header := headerStyle.Render(fmt.Sprintf("Qube • %s • %s", m.modeString(), m.statusString()))
+    header := m.renderHeader()
 
     // 出力（履歴 + 進捗行）
     bodyLines := make([]string, 0, len(m.lines)+1)
