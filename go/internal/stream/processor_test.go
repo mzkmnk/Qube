@@ -7,33 +7,38 @@ import (
     "testing"
 )
 
+// readFileLines は golden ファイルを読み込み、行配列に変換する
+// 行末は \n に正規化し、末尾の余分な改行は削除する
 func readFileLines(t *testing.T, p string) []string {
-	t.Helper()
-	data, err := os.ReadFile(p)
-	if err != nil { t.Fatalf("read %s: %v", p, err) }
-	s := string(data)
+    t.Helper()
+    data, err := os.ReadFile(p)
+    if err != nil { t.Fatalf("read %s: %v", p, err) }
+    s := string(data)
     // 行末を \n に正規化
-	s = strings.ReplaceAll(s, "\r\n", "\n")
+    s = strings.ReplaceAll(s, "\r\n", "\n")
     // 最後の改行は比較しやすいように除去（行単位で比較）
-	if strings.HasSuffix(s, "\n") {
-		s = s[:len(s)-1]
-	}
-	if s == "" { return []string{} }
-	return strings.Split(s, "\n")
+    if strings.HasSuffix(s, "\n") {
+        s = s[:len(s)-1]
+    }
+    if s == "" { return []string{} }
+    return strings.Split(s, "\n")
 }
 
+// streamAll は入力文字列を 1 文字ずつ Processor に流し、履歴行を収集する
 func streamAll(t *testing.T, processor *Processor, input string) []string {
-	t.Helper()
-	var out []string
-	onLines := func(lines []string) { out = append(out, lines...) }
-	processor.onLinesReady = onLines
-	processor.onProgressUpdate = func(_ *string) {}
-	for i := 0; i < len(input); i++ {
-		processor.ProcessData("stdout", string(input[i]))
-	}
-	return out
+    t.Helper()
+    var out []string
+    onLines := func(lines []string) { out = append(out, lines...) }
+    processor.onLinesReady = onLines
+    processor.onProgressUpdate = func(_ *string) {}
+    for i := 0; i < len(input); i++ {
+        processor.ProcessData("stdout", string(input[i]))
+    }
+    return out
 }
 
+// Test_FixturesMatchGolden は fixtures/streams の入力に対し、
+// Processor の出力が fixtures/golden と一致することを検証する
 func Test_FixturesMatchGolden(t *testing.T) {
 	root, err := os.Getwd()
 	if err != nil { t.Fatal(err) }
