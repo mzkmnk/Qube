@@ -115,13 +115,15 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
       // グローバルモックセッションを取得
       mockSession = globalMockSession;
 
-      // When
+      // When: 通常のThinking...とスピナー付きのThinking...の両方をテスト
       mockSession?.emit("data", "stdout", "Thinking...\n");
+      mockSession?.emit("data", "stdout", "⠏ Thinking...\n");
+      mockSession?.emit("data", "stdout", "⠋ Thinking...\r");
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Then
       const output = lastFrame() || "";
-      expect(output).not.toContain("Thinking...");
+      expect(output).not.toContain("Thinking");
     });
   });
 

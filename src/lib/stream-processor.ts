@@ -30,7 +30,7 @@ export class StreamProcessor {
       const crParts = merged.split("\r");
       const lastPart = crParts[crParts.length - 1];
 
-      // 進捗パターンの検出
+      // 進捗パターンの検出（Thinking...は除外）
       const progressPatterns = [
         /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏].*\.{3}/, // スピナー + ...
         /Loading\.\.\./,
@@ -38,7 +38,10 @@ export class StreamProcessor {
         /Downloading|Uploading|Indexing/i,
       ];
 
-      if (progressPatterns.some((p) => p.test(lastPart))) {
+      // Thinking...を含む行は進捗行として扱わない
+      const isThinkingLine = /Thinking/i.test(lastPart);
+      
+      if (!isThinkingLine && progressPatterns.some((p) => p.test(lastPart))) {
         this.currentProgressLine = lastPart.trim();
         this.config.onProgressUpdate(this.currentProgressLine);
       }
@@ -62,9 +65,8 @@ export class StreamProcessor {
       const trimmed = line.trim();
       if (!trimmed) continue;
 
-      // Thinking... 系の行は抑制
-      if (trimmed === "Thinking..." || trimmed.includes("Thinking..."))
-        continue;
+      // Thinking... 系の行は抑制（スピナー付きも含む）
+      if (/Thinking/i.test(trimmed)) continue;
 
       linesToAdd.push(line);
     }
