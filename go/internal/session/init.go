@@ -4,8 +4,8 @@ import (
     "regexp"
 )
 
-// initDetector strips ANSI and detects initialization completion
-// by phrase or separator+blankline.
+// initDetector は ANSI を除去した上で、初期化完了を表すパターンを検知する。
+// 文言検知と罫線+空行の2系統に対応。
 type initDetector struct {
     buf string
 }
@@ -20,7 +20,7 @@ var (
 func newInitDetector() *initDetector { return &initDetector{} }
 
 func (d *initDetector) Feed(s string) bool {
-    // Append and strip ANSI on the fly for detection
+    // 入力を連結し、検知用に ANSI を除去
     d.buf += s
     plain := reANSI.ReplaceAllString(d.buf, "")
     if rePhrase.MatchString(plain) {

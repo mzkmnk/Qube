@@ -9,7 +9,7 @@ import (
     "time"
 )
 
-// helper to skip on unsupported OS
+// Windows 環境ではシェル実行の挙動差が大きいためスキップ
 func requireUnix(t *testing.T) {
     t.Helper()
     if runtime.GOOS == "windows" {

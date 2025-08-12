@@ -8,8 +8,8 @@ import (
     "time"
 )
 
-// Run executes a short-lived command and returns combined stdout+stderr,
-// exit code, and error. On timeout, returns ("", -1, context.DeadlineExceeded).
+// Run は短命コマンドを実行し、結合出力(stdout+stderr)、終了コード、エラーを返す。
+// タイムアウト時は ("", -1, context.DeadlineExceeded) を返す。
 func Run(args []string, timeout time.Duration) (string, int, error) {
     if len(args) == 0 {
         return "", -1, errors.New("no command provided")
@@ -32,7 +32,7 @@ func Run(args []string, timeout time.Duration) (string, int, error) {
 
     select {
     case <-ctx.Done():
-        // Timeout: kill and return quickly
+        // タイムアウト: Kill して即時リターン
         _ = cmd.Process.Kill()
         return "", -1, context.DeadlineExceeded
     case err := <-done:
@@ -43,6 +43,7 @@ func Run(args []string, timeout time.Duration) (string, int, error) {
         if exitErr, ok := err.(*exec.ExitError); ok {
             return out, exitErr.ExitCode(), err
         }
+        // 上記以外のエラー（起動失敗など）
         return out, -1, err
     }
 }

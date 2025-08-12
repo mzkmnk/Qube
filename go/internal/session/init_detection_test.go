@@ -10,7 +10,7 @@ func Test_InitializationDetection_ByPhrase(t *testing.T) {
     if det.Feed(noisy) {
         // ok
     } else {
-        t.Fatal("expected initialization detected by phrase")
+        t.Fatal("文言による初期化検知に失敗")
     }
 }
 
@@ -21,7 +21,6 @@ func Test_InitializationDetection_BySeparator(t *testing.T) {
     if det.Feed(text) {
         // ok
     } else {
-        t.Fatal("expected initialization detected by separator")
+        t.Fatal("罫線+空行による初期化検知に失敗")
     }
 }
-

@@ -7,7 +7,7 @@ import (
     "time"
 )
 
-// Test basic lifecycle: Start -> Send echo -> receive -> Stop
+// ライフサイクル: Start → Send echo → 受信 → Stop
 func Test_Session_Start_Send_Receive_Stop(t *testing.T) {
     s := New()
     defer s.Stop()
@@ -46,4 +46,3 @@ func Test_Session_Start_Send_Receive_Stop(t *testing.T) {
         t.Fatalf("stop: %v", err)
     }
 }
-

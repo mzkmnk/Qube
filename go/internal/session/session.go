@@ -14,19 +14,20 @@ import (
     ptypkg "github.com/creack/pty"
 )
 
+// Session は PTY 上で実行されるインタラクティブシェルを管理する。
 type Session struct {
     cmd   *exec.Cmd
     pty   *os.File
     once  sync.Once
 
-    OnData func([]byte)
-    OnExit func(int)
-    OnError func(error)
+    OnData  func([]byte) // シェル出力受信時に呼ばれる
+    OnExit  func(int)    // プロセス終了時に終了コード付きで呼ばれる
+    OnError func(error)  // 受信/待機中のエラー通知
 }
 
 func New() *Session { return &Session{} }
 
-// Start launches an interactive shell under a PTY.
+// Start は PTY 上に対話シェルを起動する。
 func (s *Session) Start(_mode string) error {
     var shell string
     if runtime.GOOS == "windows" {
@@ -42,21 +43,21 @@ func (s *Session) Start(_mode string) error {
     }
     s.pty = f
 
-    // Reader goroutine
+    // Reader ゴルーチン
     go func() {
         r := bufio.NewReader(f)
         buf := make([]byte, 4096)
         for {
             n, err := r.Read(buf)
             if n > 0 && s.OnData != nil {
-                // Copy to avoid retaining large backing array
+                // バッファ使い回しによる裏配列共有を避けるためコピー
                 b := make([]byte, n)
                 copy(b, buf[:n])
                 s.OnData(b)
             }
             if err != nil {
                 if errors.Is(err, io.EOF) {
-                    // Wait for exit to report code
+                    // 終了コードは Wait ゴルーチンで通知
                     return
                 }
                 if s.OnError != nil {
@@ -67,7 +68,7 @@ func (s *Session) Start(_mode string) error {
         }
     }()
 
-    // Wait goroutine
+    // Wait ゴルーチン
     go func() {
         err := s.cmd.Wait()
         code := 0
@@ -75,7 +76,7 @@ func (s *Session) Start(_mode string) error {
             if exitErr, ok := err.(*exec.ExitError); ok {
                 code = exitErr.ExitCode()
             } else {
-                // Unknown error
+                // 不明なエラー
                 if s.OnError != nil { s.OnError(err) }
                 code = -1
             }
@@ -86,14 +87,14 @@ func (s *Session) Start(_mode string) error {
     return nil
 }
 
-// Send writes a line to the PTY.
+// Send は PTY に 1 行書き込む（CRLF 付与）。
 func (s *Session) Send(text string) error {
     if s.pty == nil { return errors.New("session not started") }
     _, err := s.pty.Write([]byte(text + "\r\n"))
     return err
 }
 
-// Stop terminates the session.
+// Stop はセッションを終了する（TERM→Kill フォールバック）。
 func (s *Session) Stop() error {
     var err error
     s.once.Do(func() {
@@ -101,7 +102,7 @@ func (s *Session) Stop() error {
             _ = s.pty.Close()
         }
         if s.cmd != nil && s.cmd.Process != nil {
-            // Try graceful then kill
+            // まず TERM、一定時間で Kill
             _ = s.cmd.Process.Signal(syscall.SIGTERM)
             timer := time.NewTimer(300 * time.Millisecond)
             done := make(chan struct{})
@@ -118,4 +119,3 @@ func (s *Session) Stop() error {
     })
     return err
 }
-
