@@ -1,10 +1,10 @@
 package stream
 
 import (
-    "os"
-    "path/filepath"
-    "strings"
-    "testing"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
 )
 
 // readFileLines は golden ファイルを読み込み、行配列に変換する
@@ -17,9 +17,7 @@ func readFileLines(t *testing.T, p string) []string {
     // 行末を \n に正規化
     s = strings.ReplaceAll(s, "\r\n", "\n")
     // 最後の改行は比較しやすいように除去（行単位で比較）
-    if strings.HasSuffix(s, "\n") {
-        s = s[:len(s)-1]
-    }
+    s = strings.TrimSuffix(s, "\n")
     if s == "" { return []string{} }
     return strings.Split(s, "\n")
 }
