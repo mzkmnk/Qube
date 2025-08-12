@@ -1,6 +1,7 @@
 node_modules/
 dist/
 coverage/
+go/.gocache/
 *.log
 .DS_Store
 .env
