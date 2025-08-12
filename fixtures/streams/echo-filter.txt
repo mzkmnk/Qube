@@ -1,0 +1,4 @@
+# エコーバックは lastSentCommand と一致なら除外
+>>SET_LAST_CMD: q help
+q help
+Usage: q [command]

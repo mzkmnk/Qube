@@ -1,0 +1,2 @@
+[31mRed[0m line
+Plain line
