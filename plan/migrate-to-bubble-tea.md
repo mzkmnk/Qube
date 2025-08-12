@@ -95,9 +95,9 @@
 - [x] エラーハンドリング（OnError → errorCount 増加、status 更新）
 - [x] モード切替の実装（command/session の自動判定）
 - [x] 初期化時の自動 chat セッション開始
-- [ ] Q CLI検出機能の実装（環境変数 Q_BIN、PATH検索）
-- [ ] 実際のQ CLIバイナリを使用した短命コマンド実行
-- [ ] PTYセッションで実際のQ CLIを起動
+- [x] Q CLI検出機能の実装（環境変数 Q_BIN、PATH検索）
+- [x] 実際のQ CLIバイナリを使用した短命コマンド実行
+- [x] PTYセッションで実際のQ CLIを起動
 
 ## 10. 併存検証（開発者向け）
 - [ ] `npm run start:go` で Go 版を起動（開発者ローカルのみ）
