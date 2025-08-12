@@ -86,6 +86,8 @@ type Model struct {
 	version        string  // バージョン番号
 	connected      bool    // 接続状態
 	inputEnabled   bool    // 入力の有効/無効状態
+	width          int     // ターミナルの幅
+	height         int     // ターミナルの高さ
 }
 
 func New() Model {
@@ -102,6 +104,8 @@ func New() Model {
 		version:      "0.1.0",
 		connected:    false,
 		inputEnabled: true,
+		width:        80,  // デフォルト幅
+		height:       24,  // デフォルト高さ
 	}
 }
 
@@ -144,6 +148,11 @@ func (m *Model) SetInputEnabled(enabled bool) {
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch v := msg.(type) {
+    case tea.WindowSizeMsg:
+        // ターミナルサイズが変更された時
+        m.width = v.Width
+        m.height = v.Height
+        return m, nil
     case tea.KeyMsg:
         switch v.Type {
         case tea.KeyCtrlC:
@@ -232,8 +241,17 @@ func (m Model) renderOutput() string {
 
 // renderInput は入力部分のレンダリングを行う
 func (m Model) renderInput() string {
-	// スタイル定義
-	boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(0, 1)
+	// スタイル定義 - ターミナル幅に合わせて調整
+	// ボーダーとパディングを考慮して幅を計算（左右ボーダー2文字 + パディング2文字 = 4文字）
+	contentWidth := m.width - 4
+	if contentWidth < 20 {
+		contentWidth = 20 // 最小幅を確保
+	}
+	
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Padding(0, 1).
+		Width(m.width - 2) // ターミナル幅より少し小さく
 	
 	// プロンプトの選択
 	var prompt string
