@@ -11,6 +11,8 @@ export interface StreamProcessorConfig {
 export class StreamProcessor {
   private buffer = "";
   private currentProgressLine: string | null = null;
+  // Thinking... を一時的に表示するフラグ（履歴には残さない）
+  private thinkingActive = false;
   private config: StreamProcessorConfig;
 
   constructor(config: StreamProcessorConfig) {
@@ -38,10 +40,14 @@ export class StreamProcessor {
         /Downloading|Uploading|Indexing/i,
       ];
 
-      // Thinking...を含む行は進捗行として扱わない
       const isThinkingLine = /Thinking/i.test(lastPart);
-      
-      if (!isThinkingLine && progressPatterns.some((p) => p.test(lastPart))) {
+
+      if (isThinkingLine) {
+        this.thinkingActive = true;
+        this.currentProgressLine = "Thinking...";
+        this.config.onProgressUpdate(this.currentProgressLine);
+      } else if (progressPatterns.some((p) => p.test(lastPart))) {
+        this.thinkingActive = false; // 通常進捗に切替
         this.currentProgressLine = lastPart.trim();
         this.config.onProgressUpdate(this.currentProgressLine);
       }
@@ -55,7 +61,8 @@ export class StreamProcessor {
     const linesToAdd: string[] = [];
 
     // 改行が来たタイミングで、進捗行が存在すれば1回だけ履歴に残す
-    if (parts.length > 0 && this.currentProgressLine) {
+    // ただし Thinking... は履歴に残さず表示のみ
+    if (parts.length > 0 && this.currentProgressLine && !this.thinkingActive) {
       linesToAdd.push(this.currentProgressLine);
       this.currentProgressLine = null;
       this.config.onProgressUpdate(null);
@@ -65,8 +72,20 @@ export class StreamProcessor {
       const trimmed = line.trim();
       if (!trimmed) continue;
 
-      // Thinking... 系の行は抑制（スピナー付きも含む）
-      if (/Thinking/i.test(trimmed)) continue;
+      // Thinking... 系の行は履歴に残さず、進捗として表示のみ
+      if (/Thinking/i.test(trimmed)) {
+        this.thinkingActive = true;
+        this.currentProgressLine = "Thinking...";
+        this.config.onProgressUpdate(this.currentProgressLine);
+        continue;
+      }
+
+      // Thinking... から通常出力に遷移する際は、Thinking表示を消す
+      if (this.thinkingActive) {
+        this.thinkingActive = false;
+        this.currentProgressLine = null;
+        this.config.onProgressUpdate(null);
+      }
 
       linesToAdd.push(line);
     }

@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
+import { ScrambleText } from "./ScrambleText";
 
 interface OutputProps {
   lines: string[];
@@ -49,6 +50,15 @@ export const Output: React.FC<OutputProps> = ({ lines, height }) => {
               </Box>
             );
           } else {
+            // Thinking... はスクランブル表示（履歴には残らない想定の一時表示）
+            if (line.trim() === "Thinking...") {
+              return (
+                <Box key={`${index}-thinking`}>
+                  <ScrambleText base="Thinking..." mode="pure" fps={40} scramblePunctuation />
+                </Box>
+              );
+            }
+
             // 通常の出力
             return (
               <Text key={`${index}-${line.substring(0, 20)}`}>{line}</Text>
