@@ -47,3 +47,27 @@ func Run(args []string, timeout time.Duration) (string, int, error) {
         return out, -1, err
     }
 }
+
+// RunQ はAmazon Q CLIコマンドを実行する
+// args[0]が"q"の場合、実際のQ CLIバイナリパスに置き換える
+func RunQ(args []string, timeout time.Duration) (string, int, error) {
+    if len(args) == 0 {
+        return "", -1, errors.New("no command provided")
+    }
+
+    // Q CLIコマンドの場合、バイナリパスを検出して置き換え
+    if args[0] == "q" {
+        qPath, err := DetectQCLI()
+        if err != nil {
+            return "", -1, err
+        }
+        // args[0]をQ CLIバイナリパスに置き換え
+        newArgs := make([]string, len(args))
+        copy(newArgs, args)
+        newArgs[0] = qPath
+        return Run(newArgs, timeout)
+    }
+
+    // Q CLI以外のコマンドはそのまま実行
+    return Run(args, timeout)
+}

@@ -13,7 +13,7 @@ import (
     "qube/internal/ui"
 )
 
-// execqAdapter はexecq.Runをexecutor.ExecQインターフェースに適合させる
+// execqAdapter はexecq.RunQをexecutor.ExecQインターフェースに適合させる
 type execqAdapter struct{}
 
 func (e *execqAdapter) Run(ctx context.Context, args []string) (string, error) {
@@ -24,7 +24,8 @@ func (e *execqAdapter) Run(ctx context.Context, args []string) (string, error) {
         timeout = time.Until(deadline)
     }
     
-    output, _, err := execq.Run(args, timeout)
+    // Q CLIコマンドを実行（"q"で始まる場合は自動的にバイナリパスを検出）
+    output, _, err := execq.RunQ(args, timeout)
     return output, err
 }
 
