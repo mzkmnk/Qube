@@ -325,7 +325,7 @@ func (m Model) renderOutput() string {
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("14")).
-		PaddingLeft(1).PaddingRight(1)
+		Width(m.width - 2)
 	
 	for _, line := range m.lines {
 		if strings.HasPrefix(line, "USER_INPUT:") {
@@ -360,7 +360,7 @@ func (m Model) renderInput() string {
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		Padding(0, 1).
-		Width(m.width - 2) // ターミナル幅より少し小さく
+		Width(m.width - 2)
 	
 	// プロンプトの選択
 	var prompt string
