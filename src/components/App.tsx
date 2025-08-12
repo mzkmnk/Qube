@@ -4,11 +4,13 @@ import { Header } from "./Header";
 import { Output } from "./Output";
 import { Input } from "./Input";
 import { StatusBar } from "./StatusBar";
+import { QubeTitle } from "./QubeTitle";
 import { CommandHistory } from "../lib/history";
 import { QSession } from "../lib/q-session";
 import { StreamProcessor } from "../lib/stream-processor";
 import { KeyboardHandler } from "../lib/keyboard-handler";
 import { CommandExecutor } from "../lib/command-executor";
+import { clearTerminal } from "../lib/terminal";
 
 interface AppProps {
   version?: string;
@@ -27,6 +29,7 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
   const [history] = useState(() => new CommandHistory());
   const [session] = useState(() => new QSession());
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [sessionInitialized, setSessionInitialized] = useState(false);
   const [currentProgressLine, setCurrentProgressLine] = useState<string | null>(
     null,
   );
@@ -48,9 +51,7 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
           setStatus("running");
           await session.start("chat");
           setSessionStarted(true);
-          setStatus("ready");
-          // 初期メッセージは表示しない（Qからのメッセージのみ表示）
-          setOutputLines((prev) => [...prev]);
+          // 初期化完了は initialized イベントでハンドル
         } catch (error) {
           setOutputLines((prev) => [
             ...prev,
@@ -67,6 +68,10 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
   // セッションからの出力処理
   useEffect(() => {
     const handleData = (type: string, data: string) => {
+      // 初期化が完了するまでの出力は無視する
+      if (!sessionInitialized) {
+        return;
+      }
       streamProcessor.processData(type, data);
     };
 
@@ -85,16 +90,27 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
       setErrorCount((prev) => prev + 1);
     };
 
+    const handleInitialized = () => {
+      setSessionInitialized(true);
+      setStatus("ready");
+      // 初期化完了時に画面をクリア
+      clearTerminal({ scrollback: true });
+      streamProcessor.clear();
+      setOutputLines([]);
+    };
+
     session.on("data", handleData);
     session.on("exit", handleExit);
     session.on("error", handleError);
+    session.on("initialized", handleInitialized);
 
     return () => {
       session.removeListener("data", handleData);
       session.removeListener("exit", handleExit);
       session.removeListener("error", handleError);
+      session.removeListener("initialized", handleInitialized);
     };
-  }, [session, streamProcessor]);
+  }, [session, streamProcessor, sessionInitialized]);
 
   // コマンド実行エンジンの初期化
   const [commandExecutor] = useState(
@@ -132,18 +148,6 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
           exit();
           process.exit(0);
         },
-        onInterrupt: () => {
-          if (session.running) {
-            session.stop();
-            setStatus("ready");
-            setMode("command");
-          }
-        },
-        onClear: () => {
-          setOutputLines([]);
-          setErrorCount(0);
-          streamProcessor.clear();
-        },
         onHistoryUp: () => {
           const prev = history.getPrevious();
           if (prev) {
@@ -170,6 +174,12 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
     history.add(command);
     history.resetPosition();
 
+    // ユーザー入力を履歴に表示（枠組み付きで表示されるようにプレフィックスを付ける）
+    setOutputLines((prev) => [...prev, `USER_INPUT:${command}`]);
+
+    // エコーバックフィルタリング用に最後に送信したコマンドを設定
+    streamProcessor.setLastSentCommand(command);
+
     // 入力欄をクリアし、実行中コマンドを記録
     setInputValue("");
     setCurrentCommand(command);
@@ -189,17 +199,22 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
       <Header
         title="Qube"
         version={version}
-        connected={sessionStarted && session.running}
+        connected={sessionInitialized && session.running}
       />
+
+      {/* QUBEロゴを常に表示 */}
+      <QubeTitle />
+
       <Output
-        lines={[
-          ...outputLines,
-          ...(currentProgressLine ? [currentProgressLine] : []),
-        ]}
+        lines={outputLines}
+        currentProgressLine={currentProgressLine}
+        showPlaceholder={false}
       />
       <Input
         value={inputValue}
-        placeholder="Enter Q command..."
+        placeholder={
+          !sessionInitialized ? "Initializing..." : "Enter Q command..."
+        }
         disabled={status === "running" && mode === "command"}
         onChange={setInputValue}
         onSubmit={handleSubmit}

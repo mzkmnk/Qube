@@ -11,7 +11,11 @@ export interface StreamProcessorConfig {
 export class StreamProcessor {
   private buffer = "";
   private currentProgressLine: string | null = null;
+  // Thinking... を一時的に表示するフラグ（履歴には残さない）
+  private thinkingActive = false;
   private config: StreamProcessorConfig;
+  // 最後に送信したコマンド（エコーバックフィルタリング用）
+  private lastSentCommand: string | null = null;
 
   constructor(config: StreamProcessorConfig) {
     this.config = config;
@@ -30,7 +34,7 @@ export class StreamProcessor {
       const crParts = merged.split("\r");
       const lastPart = crParts[crParts.length - 1];
 
-      // 進捗パターンの検出
+      // 進捗パターンの検出（Thinking...は除外）
       const progressPatterns = [
         /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏].*\.{3}/, // スピナー + ...
         /Loading\.\.\./,
@@ -38,7 +42,14 @@ export class StreamProcessor {
         /Downloading|Uploading|Indexing/i,
       ];
 
-      if (progressPatterns.some((p) => p.test(lastPart))) {
+      const isThinkingLine = /Thinking/i.test(lastPart);
+
+      if (isThinkingLine) {
+        this.thinkingActive = true;
+        this.currentProgressLine = "Thinking...";
+        this.config.onProgressUpdate(this.currentProgressLine);
+      } else if (progressPatterns.some((p) => p.test(lastPart))) {
+        this.thinkingActive = false; // 通常進捗に切替
         this.currentProgressLine = lastPart.trim();
         this.config.onProgressUpdate(this.currentProgressLine);
       }
@@ -52,7 +63,8 @@ export class StreamProcessor {
     const linesToAdd: string[] = [];
 
     // 改行が来たタイミングで、進捗行が存在すれば1回だけ履歴に残す
-    if (parts.length > 0 && this.currentProgressLine) {
+    // ただし Thinking... は履歴に残さず表示のみ
+    if (parts.length > 0 && this.currentProgressLine && !this.thinkingActive) {
       linesToAdd.push(this.currentProgressLine);
       this.currentProgressLine = null;
       this.config.onProgressUpdate(null);
@@ -60,11 +72,33 @@ export class StreamProcessor {
 
     for (const line of parts) {
       const trimmed = line.trim();
-      if (!trimmed) continue;
-
-      // Thinking... 系の行は抑制
-      if (trimmed === "Thinking..." || trimmed.includes("Thinking..."))
+      // 空行は基本的にスキップ
+      if (!trimmed) {
+        // エコーバック直後の空行の可能性があるのでスキップ
         continue;
+      }
+
+      // Thinking... 系の行は履歴に残さず、進捗として表示のみ
+      if (/Thinking/i.test(trimmed)) {
+        this.thinkingActive = true;
+        this.currentProgressLine = "Thinking...";
+        this.config.onProgressUpdate(this.currentProgressLine);
+        continue;
+      }
+
+      // Thinking... から通常出力に遷移する際は、Thinking表示を消す
+      if (this.thinkingActive) {
+        this.thinkingActive = false;
+        this.currentProgressLine = null;
+        this.config.onProgressUpdate(null);
+      }
+
+      // ユーザー入力のエコーバックをフィルタリング
+      // PTYからのエコーバックは送信したコマンドと完全一致する
+      if (this.lastSentCommand && trimmed === this.lastSentCommand) {
+        this.lastSentCommand = null; // 一度フィルタリングしたらリセット
+        continue;
+      }
 
       linesToAdd.push(line);
     }
@@ -84,10 +118,18 @@ export class StreamProcessor {
   }
 
   /**
+   * 最後に送信したコマンドを設定（エコーバックフィルタリング用）
+   */
+  setLastSentCommand(command: string): void {
+    this.lastSentCommand = command.trim();
+  }
+
+  /**
    * バッファをクリア
    */
   clear(): void {
     this.buffer = "";
     this.currentProgressLine = null;
+    this.lastSentCommand = null;
   }
 }

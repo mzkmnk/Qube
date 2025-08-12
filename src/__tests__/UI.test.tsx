@@ -131,9 +131,7 @@ describe("UI Component Tests - UIコンポーネントのテスト", () => {
       const output = lastFrame() || "";
       expect(output).toContain("●"); // Ready indicator
       expect(output).toContain("Chat");
-      expect(output).toContain("^C Stop");
-      expect(output).toContain("^D Exit");
-      expect(output).toContain("^L Clear");
+      expect(output).toContain("^C Exit");
       expect(output).toContain("↑↓ History");
     });
 

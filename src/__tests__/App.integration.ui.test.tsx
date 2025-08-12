@@ -100,9 +100,7 @@ describe("App Integration Tests", () => {
       expect(output).toContain("v0.1.0");
       expect(output).toContain("▶"); // 入力プロンプト
       expect(output).toContain("●"); // ステータスインジケーター
-      expect(output).toContain("^C Stop");
-      expect(output).toContain("^D Exit");
-      expect(output).toContain("^L Clear");
+      expect(output).toContain("^C Exit");
       expect(output).toContain("↑↓ History");
     });
 
@@ -166,52 +164,7 @@ describe("App Integration Tests", () => {
   });
 
   describe("キーボードショートカット", () => {
-    it("Given: アプリケーションが実行中, When: Ctrl+Lを押す, Then: 出力がクリアされる", async () => {
-      // Given
-      const { stdin, lastFrame } = render(<App />);
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // メッセージを出力に追加
-      mockSessionInstance.on.mockImplementation(
-        (event: string, callback: (type: string, data: string) => void) => {
-          if (event === "data") {
-            setTimeout(() => callback("stdout", "test message"), 50);
-          }
-        },
-      );
-
-      // セッションを開始してメッセージを表示
-      mockSessionInstance.running = true;
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      // When
-      stdin.write("\x0C"); // Ctrl+L
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Then
-      const output = lastFrame();
-      // Ctrl+Lでクリアされるが、UIは残る
-      expect(output).toContain("Qube"); // ヘッダーは残る
-      // テスト用メッセージはクリアされる（ただし、実装によってはOutputエリアが空になるだけ）
-      // 現在の実装ではCtrl+Lが正しく動作しない可能性があるため、テストをスキップ
-      expect(output).toBeDefined();
-    });
-
-    it("Given: セッションが実行中, When: Ctrl+Cを押す, Then: セッションが停止される", async () => {
-      // Given
-      mockSessionInstance.running = true;
-      const { stdin } = render(<App />);
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // When
-      stdin.write("\x03"); // Ctrl+C
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Then
-      expect(mockSessionInstance.stop).toHaveBeenCalled();
-    });
-
-    it("Given: アプリケーションが実行中, When: Ctrl+Dを押す, Then: アプリケーションが終了する", () => {
+    it("Given: アプリケーションが実行中, When: Ctrl+Cを押す, Then: アプリケーションが終了する", () => {
       // Given
       const mockExit = vi
         .spyOn(process, "exit")
@@ -219,7 +172,7 @@ describe("App Integration Tests", () => {
       const { stdin } = render(<App />);
 
       // When
-      stdin.write("\x04"); // Ctrl+D
+      stdin.write("\x03"); // Ctrl+C
 
       // Then
       expect(mockExit).toHaveBeenCalledWith(0);

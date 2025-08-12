@@ -92,6 +92,10 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
       // グローバルモックセッションを取得
       mockSession = globalMockSession;
 
+      // セッション初期化完了をシミュレート
+      mockSession?.emit("initialized");
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       // When: プログレス表示をシミュレート
       mockSession?.emit("data", "stdout", "⠋ Loading...\r");
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -115,13 +119,19 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
       // グローバルモックセッションを取得
       mockSession = globalMockSession;
 
-      // When
+      // セッション初期化完了をシミュレート
+      mockSession?.emit("initialized");
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // When: 通常のThinking...とスピナー付きのThinking...の両方をテスト
       mockSession?.emit("data", "stdout", "Thinking...\n");
+      mockSession?.emit("data", "stdout", "⠏ Thinking...\n");
+      mockSession?.emit("data", "stdout", "⠋ Thinking...\r");
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Then
       const output = lastFrame() || "";
-      expect(output).not.toContain("Thinking...");
+      expect(output).not.toContain("Thinking");
     });
   });
 
@@ -134,6 +144,10 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
 
       // グローバルモックセッションを取得
       mockSession = globalMockSession;
+
+      // セッション初期化完了をシミュレート
+      mockSession?.emit("initialized");
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // When
       mockSession?.emit("data", "stdout", "0 of 1 mcp servers initialized.\n");
@@ -154,6 +168,10 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
 
       // グローバルモックセッションを取得
       mockSession = globalMockSession;
+
+      // セッション初期化完了をシミュレート
+      mockSession?.emit("initialized");
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // When
       mockSession?.emit(

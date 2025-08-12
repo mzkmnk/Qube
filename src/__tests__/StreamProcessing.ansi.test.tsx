@@ -80,6 +80,10 @@ describe("ANSIエスケープコード処理のテスト", () => {
 
     mockSession = globalMockSession;
 
+    // セッション初期化完了をシミュレート
+    mockSession?.emit("initialized");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
     // When
     mockSession?.emit("data", "stdout", "\x1b[32mGreen Text\x1b[0m\n");
 
@@ -96,6 +100,10 @@ describe("ANSIエスケープコード処理のテスト", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     mockSession = globalMockSession;
+
+    // セッション初期化完了をシミュレート
+    mockSession?.emit("initialized");
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // When
     mockSession?.emit("data", "stdout", "\x1b[38;5;12mColored Text\x1b[0m\n");

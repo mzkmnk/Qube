@@ -3,68 +3,28 @@ import { KeyboardHandler } from "../lib/keyboard-handler";
 
 describe("KeyboardHandler", () => {
   describe("キーボードハンドラーの処理", () => {
-    it("Ctrl+D押下時、exitコールバックが呼ばれる", () => {
+    it("Ctrl+C押下時、exitコールバックが呼ばれる", () => {
       // Arrange
       const mockCallbacks = {
         onExit: vi.fn(),
-        onInterrupt: vi.fn(),
-        onClear: vi.fn(),
         onHistoryUp: vi.fn(),
         onHistoryDown: vi.fn(),
       };
       const handler = new KeyboardHandler(mockCallbacks);
 
-      // Act
-      handler.handleInput("d", { ctrl: true });
-
-      // Assert
-      expect(mockCallbacks.onExit).toHaveBeenCalled();
-      expect(mockCallbacks.onInterrupt).not.toHaveBeenCalled();
-    });
-
-    it("Ctrl+C押下時、interruptコールバックが呼ばれる", () => {
-      // Arrange
-      const mockCallbacks = {
-        onExit: vi.fn(),
-        onInterrupt: vi.fn(),
-        onClear: vi.fn(),
-        onHistoryUp: vi.fn(),
-        onHistoryDown: vi.fn(),
-      };
-      const handler = new KeyboardHandler(mockCallbacks);
-
-      // Act
+      // Act - Ctrl+Cの両方のパターンをテスト
       handler.handleInput("c", { ctrl: true });
+      expect(mockCallbacks.onExit).toHaveBeenCalledTimes(1);
 
-      // Assert
-      expect(mockCallbacks.onInterrupt).toHaveBeenCalled();
-      expect(mockCallbacks.onExit).not.toHaveBeenCalled();
-    });
-
-    it("Ctrl+L押下時、clearコールバックが呼ばれる", () => {
-      // Arrange
-      const mockCallbacks = {
-        onExit: vi.fn(),
-        onInterrupt: vi.fn(),
-        onClear: vi.fn(),
-        onHistoryUp: vi.fn(),
-        onHistoryDown: vi.fn(),
-      };
-      const handler = new KeyboardHandler(mockCallbacks);
-
-      // Act
-      handler.handleInput("l", { ctrl: true });
-
-      // Assert
-      expect(mockCallbacks.onClear).toHaveBeenCalled();
+      mockCallbacks.onExit.mockClear();
+      handler.handleInput("\x03", {});
+      expect(mockCallbacks.onExit).toHaveBeenCalledTimes(1);
     });
 
     it("上矢印押下時、historyUpコールバックが呼ばれる", () => {
       // Arrange
       const mockCallbacks = {
         onExit: vi.fn(),
-        onInterrupt: vi.fn(),
-        onClear: vi.fn(),
         onHistoryUp: vi.fn(),
         onHistoryDown: vi.fn(),
       };
@@ -81,8 +41,6 @@ describe("KeyboardHandler", () => {
       // Arrange
       const mockCallbacks = {
         onExit: vi.fn(),
-        onInterrupt: vi.fn(),
-        onClear: vi.fn(),
         onHistoryUp: vi.fn(),
         onHistoryDown: vi.fn(),
       };
@@ -99,8 +57,6 @@ describe("KeyboardHandler", () => {
       // Arrange
       const mockCallbacks = {
         onExit: vi.fn(),
-        onInterrupt: vi.fn(),
-        onClear: vi.fn(),
         onHistoryUp: vi.fn(),
         onHistoryDown: vi.fn(),
       };
@@ -111,8 +67,6 @@ describe("KeyboardHandler", () => {
 
       // Assert
       expect(mockCallbacks.onExit).not.toHaveBeenCalled();
-      expect(mockCallbacks.onInterrupt).not.toHaveBeenCalled();
-      expect(mockCallbacks.onClear).not.toHaveBeenCalled();
       expect(mockCallbacks.onHistoryUp).not.toHaveBeenCalled();
       expect(mockCallbacks.onHistoryDown).not.toHaveBeenCalled();
     });

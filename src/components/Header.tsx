@@ -11,7 +11,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   title,
   version,
-  width = 60,
   connected = false,
 }) => {
   return (
@@ -40,11 +39,6 @@ export const Header: React.FC<HeaderProps> = ({
           <Text color="gray" dimColor>
             Amazon Q CLI Enhanced Interface
           </Text>
-        </Box>
-
-        {/* セパレーター - よりシンプルなライン */}
-        <Box paddingX={1} marginTop={1}>
-          <Text dimColor>{"─".repeat(width)}</Text>
         </Box>
       </Box>
     </Box>

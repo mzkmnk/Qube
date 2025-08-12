@@ -1,44 +1,51 @@
 import React from "react";
 import { render } from "ink-testing-library";
-import { describe, it, expect } from "vitest";
+import { test, expect, describe } from "vitest";
 import { Output } from "../components/Output";
 
 describe("Output コンポーネント", () => {
-  it("出力内容を表示する", () => {
-    const lines = ["Line 1", "Line 2", "Line 3"];
+  test("出力がない場合、Waiting for output...を表示しない（空白表示）", () => {
+    const { lastFrame } = render(<Output lines={[]} showPlaceholder={false} />);
+
+    // 初期化完了後はWaiting for output...を表示しない
+    expect(lastFrame()).not.toContain("Waiting for output...");
+    expect(lastFrame()).toBe("");
+  });
+
+  test("出力がある場合、正しく表示する", () => {
+    const lines = ["Hello, World!", "テスト出力"];
     const { lastFrame } = render(<Output lines={lines} />);
 
-    expect(lastFrame()).toContain("Line 1");
-    expect(lastFrame()).toContain("Line 2");
-    expect(lastFrame()).toContain("Line 3");
+    expect(lastFrame()).toContain("Hello, World!");
+    expect(lastFrame()).toContain("テスト出力");
   });
 
-  it("空の配列の場合、何も表示しない", () => {
-    const { lastFrame } = render(<Output lines={[]} />);
+  test("ユーザー入力は枠組み付きで表示する", () => {
+    const lines = ["USER_INPUT:質問があります"];
+    const { lastFrame } = render(<Output lines={lines} />);
 
-    // Waiting for output... が表示される
-    expect(lastFrame()).toContain("Waiting for output...");
+    expect(lastFrame()).toContain("▶ 質問があります");
+    expect(lastFrame()).toContain("┌");
+    expect(lastFrame()).toContain("└");
   });
 
-  it("高さが指定されている場合、その高さで表示される", () => {
-    const lines = ["Line 1", "Line 2", "Line 3", "Line 4", "Line 5"];
+  test("高さ制限がある場合、最新の行を優先表示", () => {
+    const lines = ["行1", "行2", "行3", "行4", "行5"];
     const { lastFrame } = render(<Output lines={lines} height={3} />);
 
-    const output = lastFrame();
-    expect(output).toBeDefined();
-    // The number of lines should be constrained by the height.
-    // We expect 3 lines of content + borders.
-    // Note: This is an inexact check.
-    expect(output?.split("\n").length).toBeLessThanOrEqual(5); // 3 for content + 2 for borders
+    expect(lastFrame()).not.toContain("行1");
+    expect(lastFrame()).not.toContain("行2");
+    expect(lastFrame()).toContain("行3");
+    expect(lastFrame()).toContain("行4");
+    expect(lastFrame()).toContain("行5");
   });
 
-  // scrollOffset は廃止（YAGNI）
-
-  it("ANSIカラーコードを含む行をそのまま表示する", () => {
-    const lines = ["\u001b[32mGreen text\u001b[0m"];
+  test("Thinking...メッセージは特別な表示（スクランブル）", () => {
+    const lines = ["Thinking..."];
     const { lastFrame } = render(<Output lines={lines} />);
 
-    const output = lastFrame();
-    expect(output).toContain("Green text");
+    // スクランブル表示されるため、実際の表示内容は変化する
+    // ただし、何らかの文字が表示されることを確認
+    expect(lastFrame()).not.toBe("");
   });
 });

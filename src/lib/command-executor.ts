@@ -32,8 +32,7 @@ export class CommandExecutor {
     // 空のコマンドは無視
     if (!command.trim()) return;
 
-    // 出力に追加（プロンプトにアイコンを追加）
-    this.callbacks.onOutput(`💬 ${command}`);
+    // ステータスを実行中に変更
     this.callbacks.onStatusChange("running");
 
     try {

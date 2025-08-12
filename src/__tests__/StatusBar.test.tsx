@@ -43,10 +43,8 @@ describe("StatusBar コンポーネント", () => {
       <StatusBar mode="command" status="ready" showHelp={true} />,
     );
 
-    // 実際の表示形式は "^C Stop  ^D Exit  ^L Clear  ↑↓ History"
-    expect(lastFrame()).toContain("^C Stop");
-    expect(lastFrame()).toContain("^D Exit");
-    expect(lastFrame()).toContain("^L Clear");
+    // 実際の表示形式は "^C Exit  ↑↓ History"
+    expect(lastFrame()).toContain("^C Exit");
     expect(lastFrame()).toContain("↑↓ History");
   });
 });

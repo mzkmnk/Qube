@@ -34,33 +34,18 @@ describe("App コンポーネント", () => {
     expect(output).toMatch(/command|ready/);
   });
 
-  it("Ctrl+D で終了する", () => {
+  it("Ctrl+C で終了する", () => {
     const { stdin, unmount } = render(<App />);
     const exitSpy = vi
       .spyOn(process, "exit")
       .mockImplementation(() => undefined as never);
 
-    // Ctrl+D を送信
-    stdin.write("\x04");
+    // Ctrl+C を送信
+    stdin.write("\x03");
 
     expect(exitSpy).toHaveBeenCalledWith(0);
 
     exitSpy.mockRestore();
     unmount();
-  });
-
-  it("Ctrl+L で画面をクリアする", () => {
-    const { stdin, lastFrame } = render(<App />);
-
-    // 初期状態を確認
-    const beforeClear = lastFrame();
-    expect(beforeClear).toBeDefined();
-
-    // Ctrl+L を送信
-    stdin.write("\x0C");
-
-    // クリア後も表示されることを確認
-    const afterClear = lastFrame();
-    expect(afterClear).toBeDefined();
   });
 });
