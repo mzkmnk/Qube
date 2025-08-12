@@ -12,9 +12,9 @@ func readFileLines(t *testing.T, p string) []string {
 	data, err := os.ReadFile(p)
 	if err != nil { t.Fatalf("read %s: %v", p, err) }
 	s := string(data)
-	// Normalize line endings to \n
+    // 行末を \n に正規化
 	s = strings.ReplaceAll(s, "\r\n", "\n")
-	// Trim trailing newline for comparison granularity; we will compare line-by-line
+    // 最後の改行は比較しやすいように除去（行単位で比較）
 	if strings.HasSuffix(s, "\n") {
 		s = s[:len(s)-1]
 	}
@@ -37,8 +37,7 @@ func streamAll(t *testing.T, processor *Processor, input string) []string {
 func Test_FixturesMatchGolden(t *testing.T) {
 	root, err := os.Getwd()
 	if err != nil { t.Fatal(err) }
-	// Move up to repo root if we're under go/internal/stream
-	// We assume repo structure with top-level fixtures/
+    // go/internal/stream 配下で動くことを想定し、リポジトリルートを解決
 	var repoRoot string
 	if strings.HasSuffix(root, filepath.Join("go", "internal", "stream")) {
 		repoRoot = strings.TrimSuffix(root, filepath.Join("go", "internal", "stream"))
@@ -58,15 +57,15 @@ func Test_FixturesMatchGolden(t *testing.T) {
 		streamPath := filepath.Join(streamsDir, name)
 		goldenPath := filepath.Join(goldenDir, name)
 
-        // Read stream file as raw bytes to preserve newline semantics
+        // 改行の有無を保持するためバイト列で読み込む
         rawBytes, err := os.ReadFile(streamPath)
         if err != nil { t.Fatalf("read %s: %v", streamPath, err) }
         raw := string(rawBytes)
 
-        // Build input stream exactly like the Node generator:
-        // - Split by newline boundaries, detect whether each line had a trailing newline
-        // - Apply directives/comments to the pre-newline text
-        // - Append newline only when the original line had one
+        // Node のジェネレータと同じ規則で入力ストリームを構築:
+        // - 改行境界で分割し、改行の有無を保持
+        // - 改行前のテキストに対しディレクティブ/コメント処理
+        // - 元の行に改行があった場合のみ改行を付与
         var stream strings.Builder
         processor := NewProcessor(nil, nil)
 
@@ -90,7 +89,7 @@ func Test_FixturesMatchGolden(t *testing.T) {
             }
             buf.WriteByte(ch)
         }
-        // Handle final segment without newline
+        // 最後の未改行セグメントを処理
         if rem := buf.String(); rem != "" {
             if strings.HasPrefix(rem, ">>SET_LAST_CMD: ") {
                 cmd := strings.TrimPrefix(rem, ">>SET_LAST_CMD: ")

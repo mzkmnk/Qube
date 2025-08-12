@@ -26,17 +26,17 @@ func NewProcessor(onLines OnLinesReady, onProgress OnProgressUpdate) *Processor 
 	}
 }
 
-// ProcessData processes incoming stream data chunk (stdout/stderr agnostic)
+// ProcessData はストリームのデータチャンクを処理する（stdout/stderr 共通）
 func (p *Processor) ProcessData(_type string, data string) {
-	// CRLF normalization (keep ANSI as-is)
+    // CRLF を \n に正規化（ANSI は保持）
 	merged := strings.ReplaceAll(p.buffer+data, "\r\n", "\n")
 
-	// Handle carriage return progress updates
+    // CR による進捗表示の更新処理
 	if strings.Contains(merged, "\r") {
 		parts := strings.Split(merged, "\r")
 		lastPart := parts[len(parts)-1]
 
-		// Progress patterns (excluding Thinking...)
+        // 進捗パターン（Thinking... は除外）
 		spinnerPattern := regexp.MustCompile("[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏].*\\.{3}")
 		loadingPattern := regexp.MustCompile("(?i)Loading\\.\\.\\.")
 		processingPattern := regexp.MustCompile("(?i)Processing\\.\\.\\.")
@@ -55,7 +55,7 @@ func (p *Processor) ProcessData(_type string, data string) {
 			if p.onProgressUpdate != nil { p.onProgressUpdate(p.currentProgressLine) }
 		}
 
-		// Continue processing only with latest content
+        // 以降の処理は最新内容（lastPart）のみに限定
 		merged = lastPart
 	}
 
@@ -65,7 +65,7 @@ func (p *Processor) ProcessData(_type string, data string) {
 
 	var linesToAdd []string
 
-	// If a progress line exists and at least one newline arrived, flush it once (excluding Thinking)
+    // 進捗行があり改行が入ったら1度だけ履歴に確定（Thinking は除外）
 	if len(parts) > 0 && p.currentProgressLine != nil && !p.thinkingActive {
 		linesToAdd = append(linesToAdd, *p.currentProgressLine)
 		p.currentProgressLine = nil
@@ -76,8 +76,8 @@ func (p *Processor) ProcessData(_type string, data string) {
 
 	for _, line := range parts {
 		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			// Skip empty lines (may be echo artifacts)
+        if trimmed == "" {
+            // 空行はスキップ（エコーバック直後の可能性あり）
 			continue
 		}
 
@@ -89,14 +89,14 @@ func (p *Processor) ProcessData(_type string, data string) {
 			continue
 		}
 
-		// Transition away from Thinking when normal output arrives
+        // 通常出力が来たら Thinking 表示を解除
 		if p.thinkingActive {
 			p.thinkingActive = false
 			p.currentProgressLine = nil
 			if p.onProgressUpdate != nil { p.onProgressUpdate(nil) }
 		}
 
-		// Echo-back suppression: exact match with lastSentCommand
+        // エコーバック抑制: lastSentCommand と完全一致なら除外
 		if p.lastSentCommand != nil && trimmed == *p.lastSentCommand {
 			p.lastSentCommand = nil
 			continue
