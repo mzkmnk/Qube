@@ -1,63 +1,69 @@
 import React from "react";
-import { render } from "ink-testing-library";
 import { test, expect, describe, vi, beforeEach, afterEach } from "vitest";
-import { App } from "../App";
 
-// QSessionのモック
-vi.mock("../../lib/q-session", () => {
-  const EventEmitter = require("events").EventEmitter;
-  
+// QSessionのモック（他の依存より先に定義してモックを有効化）
+vi.mock("../../lib/q-session", async () => {
+  const { EventEmitter } = await import("node:events");
   class MockQSession extends EventEmitter {
     running = false;
     initialized = false;
-    
-    async start() {
+
+    start(): void {
       this.running = true;
-      // 初期化処理をシミュレート
       setTimeout(() => {
         this.initialized = true;
         this.emit("initialized");
       }, 50);
-      return Promise.resolve();
     }
-    
-    stop() {
+
+    stop(): void {
       this.running = false;
     }
-    
-    send() {}
-    
-    getInitializationBuffer() {
+
+    send(): void {}
+
+    getInitializationBuffer(): string[] {
       return [];
     }
   }
-  
+
   return {
-    QSession: MockQSession
+    QSession: MockQSession,
   };
 });
 
 // clearTerminalのモック
 vi.mock("../../lib/terminal", () => ({
-  clearTerminal: vi.fn()
+  clearTerminal: vi.fn(),
 }));
 
 // detectQCLIのモック
 vi.mock("../../lib/q-cli-detector", () => ({
-  detectQCLI: vi.fn().mockResolvedValue("/usr/local/bin/q")
+  detectQCLI: vi.fn().mockResolvedValue("/usr/local/bin/q"),
 }));
 
 // figletのモック
 vi.mock("figlet", () => {
   return {
     default: {
-      text: (text: string, options: any, callback: (err: any, data?: string) => void) => {
-        // QUBEという文字列のASCIIアート
+       
+      text: (
+        text: string,
+         
+        options: Record<string, unknown>,
+         
+        callback: (err: unknown, data?: string) => void,
+      ) => {
         callback(null, "QUBE");
-      }
-    }
+      },
+    },
   };
 });
+
+// 依存のモックを定義した後にアプリとレンダラを読み込む
+import React from "react";
+import { render } from "ink-testing-library";
+import { App } from "../App";
 
 describe("App 統合テスト", () => {
   beforeEach(() => {

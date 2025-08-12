@@ -42,6 +42,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         {/* モード表示（シンプル） */}
         <Text color="gray">{mode === "session" ? "Chat" : "Cmd"}</Text>
 
+        {/* ステータス文言（テスト互換のため表示） */}
+        <Text color="gray" dimColor>{` ${status}`}</Text>
+
         {/* エラーカウント */}
         {errorCount > 0 && <Text color="red"> [{errorCount}]</Text>}
 

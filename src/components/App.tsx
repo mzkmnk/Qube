@@ -217,11 +217,12 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
       <Output
         lines={outputLines}
         currentProgressLine={currentProgressLine}
+        showPlaceholder={false}
       />
       <Input
         value={inputValue}
         placeholder={!sessionInitialized ? "Initializing..." : "Enter Q command..."}
-        disabled={!sessionInitialized || (status === "running" && mode === "command")}
+        disabled={status === "running" && mode === "command"}
         onChange={setInputValue}
         onSubmit={handleSubmit}
       />

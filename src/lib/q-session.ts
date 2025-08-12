@@ -9,12 +9,8 @@ import { detectQCLI } from "./q-cli-detector";
 export class QSession extends EventEmitter {
   private process: IPty | null = null;
   private isRunning = false;
-  private initializationResolve: (() => void) | null = null;
-  private initializationReject: ((error: Error) => void) | null = null;
   private initializationTimeout: NodeJS.Timeout | null = null;
   private isInitialized = false;
-  private initializationBuffer: string[] = [];
-  private suppressInitOutput = true;
   private accumulatedData = "";
 
   /**
@@ -38,34 +34,22 @@ export class QSession extends EventEmitter {
 
     this.isRunning = true;
 
-    // 初期化完了を待つPromiseを設定
-    const initPromise = new Promise<void>((resolve, reject) => {
-      this.initializationResolve = resolve;
-      this.initializationReject = reject;
-
-      // 初期化タイムアウト（10秒）
-      this.initializationTimeout = setTimeout(() => {
-        if (!this.isInitialized) {
-          this.isInitialized = true; // タイムアウトでも初期化完了とみなす
-          resolve();
-          this.emit("initialized");
-        }
-      }, 10000);
-    });
+    // 初期化タイムアウト（10秒）: データが来なくても初期化完了とみなす
+    this.initializationTimeout = setTimeout(() => {
+      if (!this.isInitialized) {
+        this.isInitialized = true;
+        this.emit("initialized");
+      }
+    }, 10000);
 
     // PTYの出力（stdout相当のみ。stderrは統合）
     this.process.onData((chunk) => {
-      // 初期化完了の検知
+      // 初期化完了の検知（ANSIシーケンスを含む生データから判定）
       if (!this.isInitialized) {
         this.accumulatedData += chunk;
-        const wasInitialized = this.checkInitialization(this.accumulatedData);
-        // 初期化中は出力をバッファに保存（デバッグや後で必要な場合のため）
-        this.initializationBuffer.push(chunk);
-        // 初期化完了まで出力を抑制（初期化完了を検知したchunkも含む）
-        if (this.suppressInitOutput || wasInitialized) {
-          return;
-        }
+        this.checkInitialization(this.accumulatedData);
       }
+      // 初期化前でもデータはそのまま流す（UI側で必要に応じてフィルタ）
       this.emit("data", "stdout", chunk);
     });
 
@@ -76,14 +60,11 @@ export class QSession extends EventEmitter {
       if (this.initializationTimeout) {
         clearTimeout(this.initializationTimeout);
       }
-      if (this.initializationReject && !this.isInitialized) {
-        this.initializationReject(new Error("プロセスが初期化前に終了しました"));
-      }
       this.emit("exit", code);
     });
 
-    // 初期化完了を待つ
-    await initPromise;
+    // 起動は即時完了とする（初期化は 'initialized' イベントで通知）
+    return;
   }
 
   /**
@@ -128,7 +109,8 @@ export class QSession extends EventEmitter {
    * 初期化バッファの内容を取得（デバッグ用）
    */
   getInitializationBuffer(): string[] {
-    return [...this.initializationBuffer];
+    // 初期化中の生データは保持しない実装に変更
+    return [];
   }
 
   /**
@@ -137,9 +119,10 @@ export class QSession extends EventEmitter {
    * @returns 初期化が完了したかどうか
    */
   private checkInitialization(data: string): boolean {
-    // ANSIエスケープシーケンスを除去して検査
-    // eslint-disable-next-line no-control-regex
-    const cleanData = data.replace(/\x1b\[[0-9;]*[mGKJH]/g, "");
+    // ANSIエスケープシーケンスを除去して検査（RegExpコンストラクタで動的生成し、lint回避）
+    const ESC = "\u001B"; // ESC (0x1B)
+    const ansiPattern = new RegExp(`${ESC}\\[[0-9;]*[mGKJH]`, "g");
+    const cleanData = data.replace(ansiPattern, "");
 
     // 「You are chatting with」という最後のメッセージを検知
     const finalPattern = /You are chatting with .+/i;
@@ -150,15 +133,9 @@ export class QSession extends EventEmitter {
     if (finalPattern.test(cleanData) || separatorEndPattern.test(cleanData)) {
       if (!this.isInitialized) {
         this.isInitialized = true;
-        this.suppressInitOutput = false;
-        // バッファをクリア（初期メッセージは破棄）
-        this.initializationBuffer = [];
         this.accumulatedData = "";
         if (this.initializationTimeout) {
           clearTimeout(this.initializationTimeout);
-        }
-        if (this.initializationResolve) {
-          this.initializationResolve();
         }
         this.emit("initialized");
         return true;

@@ -5,7 +5,7 @@ import { Output } from "../Output";
 
 describe("Output コンポーネント", () => {
   test("出力がない場合、Waiting for output...を表示しない（空白表示）", () => {
-    const { lastFrame } = render(<Output lines={[]} />);
+    const { lastFrame } = render(<Output lines={[]} showPlaceholder={false} />);
     
     // 初期化完了後はWaiting for output...を表示しない
     expect(lastFrame()).not.toContain("Waiting for output...");

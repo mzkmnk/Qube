@@ -2,9 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
 import figlet from "figlet";
 
-interface QubeTitleProps {}
-
-export const QubeTitle: React.FC<QubeTitleProps> = () => {
+export const QubeTitle: React.FC = () => {
   const [asciiArt, setAsciiArt] = useState<string>("");
 
   useEffect(() => {

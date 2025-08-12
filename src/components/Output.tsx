@@ -6,13 +6,19 @@ interface OutputProps {
   lines: string[];
   height?: number;
   currentProgressLine?: string | null;
+  showPlaceholder?: boolean;
 }
 
 /**
  * 出力表示コンポーネント
  * 単一責任: Q CLIの出力を表示するだけ
  */
-export const Output: React.FC<OutputProps> = ({ lines, height, currentProgressLine }) => {
+export const Output: React.FC<OutputProps> = ({
+  lines,
+  height,
+  currentProgressLine,
+  showPlaceholder = true,
+}) => {
   // 高さ指定がある場合は最新の行を優先表示
   const displayLines =
     height && height > 0 && lines.length > height
@@ -30,6 +36,10 @@ export const Output: React.FC<OutputProps> = ({ lines, height, currentProgressLi
       paddingX={1}
       paddingY={0}
     >
+      {/* 出力が空の場合のプレースホルダー */}
+      {showPlaceholder && displayLines.length === 0 && (
+        <Text color="gray">Waiting for output...</Text>
+      )}
       {displayLines.map((line, index) => {
           if (isUserMessage(line)) {
             // ユーザー入力は枠組み付きで表示

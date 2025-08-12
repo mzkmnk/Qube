@@ -14,7 +14,7 @@ describe("Output コンポーネント", () => {
   });
 
   it("空の配列の場合、何も表示しない", () => {
-    const { lastFrame } = render(<Output lines={[]} />);
+  const { lastFrame } = render(<Output lines={[]} showPlaceholder={false} />);
 
     // 何も表示されない
     expect(lastFrame()).toBe("");
