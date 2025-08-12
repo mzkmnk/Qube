@@ -120,6 +120,16 @@ func (m *Model) SetConnected(connected bool) {
 	m.connected = connected
 }
 
+// AddUserInput はユーザー入力を履歴に追加する
+func (m *Model) AddUserInput(input string) {
+	m.lines = append(m.lines, "USER_INPUT:"+input)
+}
+
+// AddOutput は通常の出力を履歴に追加する
+func (m *Model) AddOutput(output string) {
+	m.lines = append(m.lines, output)
+}
+
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch v := msg.(type) {
     case tea.KeyMsg:
@@ -174,6 +184,38 @@ func (m Model) renderQubeASCII() string {
 	// lipglossでカラー適用
 	logoStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("201")) // マゼンタ
 	return logoStyle.Render(ascii)
+}
+
+// renderOutput は出力部分のレンダリングを行う
+func (m Model) renderOutput() string {
+	var result []string
+	
+	// スタイル定義
+	userStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("14")) // シアン
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("14")).
+		PaddingLeft(1).PaddingRight(1)
+	
+	for _, line := range m.lines {
+		if strings.HasPrefix(line, "USER_INPUT:") {
+			// ユーザー入力は枠線付きで表示
+			message := strings.TrimPrefix(line, "USER_INPUT:")
+			userLine := userStyle.Render("▶ " + message)
+			result = append(result, boxStyle.Render(userLine))
+		} else {
+			// 通常の出力はそのまま表示
+			result = append(result, line)
+		}
+	}
+	
+	// progressLineがある場合は追加
+	if m.progressLine != nil {
+		faintStyle := lipgloss.NewStyle().Faint(true)
+		result = append(result, faintStyle.Render(*m.progressLine))
+	}
+	
+	return strings.Join(result, "\n")
 }
 
 // renderHeader はヘッダー部分のレンダリングを行う
