@@ -49,11 +49,11 @@ func (p *Processor) ProcessData(_type string, data string) {
 		lastPart := parts[len(parts)-1]
 
         // 進捗パターン（Thinking... は除外）
-		spinnerPattern := regexp.MustCompile("[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏].*\\.{3}")
-		loadingPattern := regexp.MustCompile("(?i)Loading\\.\\.\\.")
-		processingPattern := regexp.MustCompile("(?i)Processing\\.\\.\\.")
-		ioPattern := regexp.MustCompile("(?i)(Downloading|Uploading|Indexing)")
-		thinkingPattern := regexp.MustCompile("(?i)Thinking")
+        spinnerPattern := regexp.MustCompile(`[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏].*\.{3}`)
+        loadingPattern := regexp.MustCompile(`(?i)Loading\.{3}`)
+        processingPattern := regexp.MustCompile(`(?i)Processing\.{3}`)
+        ioPattern := regexp.MustCompile(`(?i)(Downloading|Uploading|Indexing)`)
+        thinkingPattern := regexp.MustCompile(`(?i)Thinking`)
 
 		if thinkingPattern.MatchString(lastPart) {
 			p.thinkingActive = true
@@ -84,7 +84,7 @@ func (p *Processor) ProcessData(_type string, data string) {
 		if p.onProgressUpdate != nil { p.onProgressUpdate(nil) }
 	}
 
-	thinkingLine := regexp.MustCompile("(?i)Thinking")
+    thinkingLine := regexp.MustCompile(`(?i)Thinking`)
 
 	for _, line := range parts {
 		trimmed := strings.TrimSpace(line)
