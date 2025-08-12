@@ -1,4 +1,3 @@
-import React from "react";
 import { test, expect, describe, vi, beforeEach, afterEach } from "vitest";
 
 // QSessionのモック（他の依存より先に定義してモックを有効化）
