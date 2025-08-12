@@ -9,6 +9,7 @@ import (
     "qube/internal/execq"
     "qube/internal/executor"
     "qube/internal/session"
+    "qube/internal/stream"
     "qube/internal/ui"
 )
 
@@ -31,6 +32,7 @@ func (e *execqAdapter) Run(ctx context.Context, args []string) (string, error) {
 type sessionAdapter struct {
     *session.Session
     running bool
+    processor *stream.SimplifiedProcessor
 }
 
 func (s *sessionAdapter) Start(sessionType string) error {
@@ -42,6 +44,10 @@ func (s *sessionAdapter) Start(sessionType string) error {
 }
 
 func (s *sessionAdapter) Send(text string) error {
+    // エコーバック抑制のためにprocessorに送信コマンドを記録
+    if s.processor != nil {
+        s.processor.SetLastSentCommand(text)
+    }
     return s.Session.Send(text)
 }
 
@@ -56,9 +62,16 @@ func (s *sessionAdapter) IsRunning() bool {
 }
 
 func main() {
+    // StreamProcessorを作成
+    processor := stream.NewSimplifiedProcessor()
+    processor.SetLastSentCommand("") // 初期値設定
+    
     // セッションを作成
     rawSess := session.New()
-    sess := &sessionAdapter{Session: rawSess}
+    sess := &sessionAdapter{
+        Session: rawSess,
+        processor: processor,
+    }
     
     // 短命コマンド実行アダプターを作成
     exec := &execqAdapter{}
@@ -69,16 +82,57 @@ func main() {
     // UIモデルを作成し、CommandExecutorを設定
     m := ui.NewWithExecutor(cmdExecutor)
     
-    // セッションからの出力をUIに伝播
+    // セッションからの出力をStreamProcessor経由でUIに伝播
     rawSess.OnData = func(data []byte) {
-        // TODO: StreamProcessorを通してから追加する必要がある
-        m.AddOutput(string(data))
+        lines := processor.Process(string(data))
+        for _, line := range lines {
+            m.AddOutput(line)
+        }
+        // progressLineの処理
+        if progressLine := processor.GetProgressLine(); progressLine != "" {
+            m.SetProgressLine(progressLine)
+        }
     }
     
     rawSess.OnError = func(err error) {
         m.IncrementErrorCount()
         m.AddOutput("Session Error: " + err.Error())
     }
+    
+    // イベントハンドラーを設定（UIのSetExecutorを上書き）
+    cmdExecutor.SetEventHandlers(
+        func(status string) {
+            // UIの既存処理を維持
+            switch status {
+            case "ready":
+                m.SetStatus(ui.StatusReady)
+                m.SetInputEnabled(true)
+            case "running":
+                m.SetStatus(ui.StatusRunning)
+                m.SetInputEnabled(false)
+            case "error":
+                m.SetStatus(ui.StatusError)
+                m.SetInputEnabled(true)
+            }
+        },
+        func(mode string) {
+            // UIの既存処理を維持
+            if mode == "session" {
+                m.SetMode(ui.ModeSession)
+            } else {
+                m.SetMode(ui.ModeCommand)
+            }
+        },
+        func(output string) {
+            // 短命コマンドの出力はそのまま追加
+            m.AddOutput(output)
+        },
+        func(err error) {
+            // UIの既存処理を維持
+            m.IncrementErrorCount()
+            m.AddOutput("Error: " + err.Error())
+        },
+    )
     
     // 初期化時に自動的にchatセッションを開始
     go func() {

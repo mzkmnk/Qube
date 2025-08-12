@@ -142,3 +142,42 @@ func (p *Processor) Clear() {
 	p.lastSentCommand = nil
 	p.thinkingActive = false
 }
+
+// SimplifiedProcessor は簡易API用のプロセッサー
+type SimplifiedProcessor struct {
+	*Processor
+	lines        []string
+	progressLine string
+}
+
+// NewSimplifiedProcessor は簡易版のProcessorを作成する
+func NewSimplifiedProcessor() *SimplifiedProcessor {
+	sp := &SimplifiedProcessor{
+		lines: []string{},
+	}
+	sp.Processor = NewProcessor(
+		func(lines []string) {
+			sp.lines = append(sp.lines, lines...)
+		},
+		func(line *string) {
+			if line != nil {
+				sp.progressLine = *line
+			} else {
+				sp.progressLine = ""
+			}
+		},
+	)
+	return sp
+}
+
+// Process はデータを処理し、確定した行を返す
+func (sp *SimplifiedProcessor) Process(data string) []string {
+	sp.lines = []string{} // リセット
+	sp.Processor.ProcessData("stdout", data)
+	return sp.lines
+}
+
+// GetProgressLine は現在の進捗行を返す
+func (sp *SimplifiedProcessor) GetProgressLine() string {
+	return sp.progressLine
+}
