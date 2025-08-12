@@ -52,10 +52,10 @@
 - ディレクティブ: 行頭 `>>SET_LAST_CMD: <text>` はエコーバック抑制用に `lastSentCommand` を設定
 
 ## 4. 最小 UI プロトタイプ（Go）
-- [ ] `tea.Model` で `state {mode,status,input,history,lines,progressLine,errorCount,currentCommand}` を定義
-- [ ] Header/StatusBar/Output/Input の最小実装（色/枠は lipgloss で近似）
-- [ ] Enter で `MsgSubmit(value)`、↑↓ で履歴移動（`CommandHistory` 相当を Go 実装）
-- [ ] Ctrl+C ハンドリング（`tea.Quit`）
+- [x] `tea.Model` で `state {mode,status,input,history,lines,progressLine,errorCount,currentCommand}` を定義
+- [x] Header/StatusBar/Output/Input の最小実装（色/枠は lipgloss で近似）
+- [x] Enter で `MsgSubmit(value)`、↑↓ で履歴移動（`CommandHistory` 相当を Go 実装）
+- [x] Ctrl+C ハンドリング（`tea.Quit`）
 
 ## 5. ストリーム処理の移植
 - [ ] `StreamProcessor` のロジックを Go 実装に移植
