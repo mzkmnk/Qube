@@ -77,7 +77,8 @@ describe("CommandExecutor", () => {
       // Assert
       expect(mockCallbacks.onModeChange).toHaveBeenCalledWith("session");
       expect(mockSession.start).toHaveBeenCalledWith("chat");
-      expect(mockCallbacks.onOutput).toHaveBeenCalledWith(`💬 ${command}`);
+      // 💬の出力は削除されたので、onOutputは呼ばれない
+      expect(mockCallbacks.onOutput).not.toHaveBeenCalledWith(`💬 ${command}`);
     });
 
     it("翻訳セッション開始コマンドを処理", async () => {
@@ -90,7 +91,8 @@ describe("CommandExecutor", () => {
       // Assert
       expect(mockCallbacks.onModeChange).toHaveBeenCalledWith("session");
       expect(mockSession.start).toHaveBeenCalledWith("translate");
-      expect(mockCallbacks.onOutput).toHaveBeenCalledWith(`💬 ${command}`);
+      // 💬の出力は削除されたので、onOutputは呼ばれない
+      expect(mockCallbacks.onOutput).not.toHaveBeenCalledWith(`💬 ${command}`);
     });
 
     it("セッション中のコマンドはセッションに送信", async () => {
@@ -103,7 +105,8 @@ describe("CommandExecutor", () => {
 
       // Assert
       expect(mockSession.send).toHaveBeenCalledWith(command);
-      expect(mockCallbacks.onOutput).toHaveBeenCalledWith(`💬 ${command}`);
+      // 💬の出力は削除されたので、onOutputは呼ばれない
+      expect(mockCallbacks.onOutput).not.toHaveBeenCalledWith(`💬 ${command}`);
     });
 
     it("通常のQコマンドを実行", async () => {
@@ -120,7 +123,7 @@ describe("CommandExecutor", () => {
 
       // Assert
       expect(spawnQ).toHaveBeenCalledWith(["help"]);
-      expect(mockCallbacks.onOutput).toHaveBeenCalledWith(`💬 ${command}`);
+      // 💬の出力は削除された
       expect(mockCallbacks.onOutput).toHaveBeenCalledWith([
         "Help output",
         "Line 2",
