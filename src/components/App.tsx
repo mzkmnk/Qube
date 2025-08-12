@@ -210,10 +210,10 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
         version={version}
         connected={sessionInitialized && session.running}
       />
-      
+
       {/* QUBEロゴを常に表示 */}
       <QubeTitle />
-      
+
       <Output
         lines={outputLines}
         currentProgressLine={currentProgressLine}
@@ -221,7 +221,9 @@ export const App: React.FC<AppProps> = ({ version = "0.1.0" }) => {
       />
       <Input
         value={inputValue}
-        placeholder={!sessionInitialized ? "Initializing..." : "Enter Q command..."}
+        placeholder={
+          !sessionInitialized ? "Initializing..." : "Enter Q command..."
+        }
         disabled={status === "running" && mode === "command"}
         onChange={setInputValue}
         onSubmit={handleSubmit}

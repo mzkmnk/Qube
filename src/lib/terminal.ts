@@ -25,4 +25,3 @@ export function clearTerminal(options: { scrollback?: boolean } = {}): void {
 
   process.stdout.write(sequences.join(""));
 }
-

@@ -46,12 +46,11 @@ vi.mock("../../lib/q-cli-detector", () => ({
 vi.mock("figlet", () => {
   return {
     default: {
-       
       text: (
         text: string,
-         
+
         options: Record<string, unknown>,
-         
+
         callback: (err: unknown, data?: string) => void,
       ) => {
         callback(null, "QUBE");
@@ -76,10 +75,10 @@ describe("App 統合テスト", () => {
 
   test("アプリ起動時、QUBEロゴが表示される", async () => {
     const { lastFrame } = render(<App version="1.0.0" />);
-    
+
     // figletの非同期処理を待つ
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     // QUBEロゴが表示されている（ASCIIアートかテキスト）
     const frame = lastFrame();
     expect(frame).toContain("QUBE");
@@ -87,10 +86,10 @@ describe("App 統合テスト", () => {
 
   test("初期化完了後、'Waiting for output...'は表示されない", async () => {
     const { lastFrame } = render(<App version="1.0.0" />);
-    
+
     // 初期化を待つ
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     const frame = lastFrame();
     // Waiting for output...が表示されていないこと
     expect(frame).not.toContain("Waiting for output...");
@@ -98,7 +97,7 @@ describe("App 統合テスト", () => {
 
   test("ユーザー入力フィールドが常に表示される", () => {
     const { lastFrame } = render(<App version="1.0.0" />);
-    
+
     const frame = lastFrame();
     // 初期化中のプレースホルダーが表示されている
     expect(frame).toMatch(/Initializing\.\.\.|Processing\.\.\./);
@@ -106,14 +105,14 @@ describe("App 統合テスト", () => {
 
   test("ヘッダーにバージョン情報が表示される", () => {
     const { lastFrame } = render(<App version="1.0.0" />);
-    
+
     const frame = lastFrame();
     expect(frame).toContain("1.0.0");
   });
 
   test("ステータスバーが表示される", () => {
     const { lastFrame } = render(<App version="1.0.0" />);
-    
+
     const frame = lastFrame();
     // ヘルプ情報が表示されている
     expect(frame).toMatch(/Ctrl\+C|Exit/i);

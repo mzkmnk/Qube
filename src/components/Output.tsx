@@ -41,27 +41,27 @@ export const Output: React.FC<OutputProps> = ({
         <Text color="gray">Waiting for output...</Text>
       )}
       {displayLines.map((line, index) => {
-          if (isUserMessage(line)) {
-            // ユーザー入力は枠組み付きで表示
-            const message = line.replace("USER_INPUT:", "").trim();
-            return (
-              <Box
-                key={`user-${index}-${message.substring(0, 10)}`}
-                borderStyle="single"
-                borderColor="cyan"
-                paddingX={1}
-                marginBottom={0}
-              >
-                <Text color="cyan">▶ {message}</Text>
-              </Box>
-            );
-          } else {
-            // 通常の出力
-            return (
-              <Text key={`output-${index}-${line.substring(0, 20)}`}>{line}</Text>
-            );
-          }
-        })}
+        if (isUserMessage(line)) {
+          // ユーザー入力は枠組み付きで表示
+          const message = line.replace("USER_INPUT:", "").trim();
+          return (
+            <Box
+              key={`user-${index}-${message.substring(0, 10)}`}
+              borderStyle="single"
+              borderColor="cyan"
+              paddingX={1}
+              marginBottom={0}
+            >
+              <Text color="cyan">▶ {message}</Text>
+            </Box>
+          );
+        } else {
+          // 通常の出力
+          return (
+            <Text key={`output-${index}-${line.substring(0, 20)}`}>{line}</Text>
+          );
+        }
+      })}
       {/* Thinking... のスクランブルアニメーション表示 */}
       {currentProgressLine && currentProgressLine.includes("Thinking") && (
         <Box marginTop={0} paddingLeft={1}>

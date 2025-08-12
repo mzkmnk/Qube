@@ -20,7 +20,8 @@ interface ScrambleTextProps {
     | "gray";
 }
 
-const DEFAULT_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const DEFAULT_CHARSET =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 export const ScrambleText: React.FC<ScrambleTextProps> = ({
   base,
@@ -33,7 +34,9 @@ export const ScrambleText: React.FC<ScrambleTextProps> = ({
 }) => {
   const charset = useMemo(() => DEFAULT_CHARSET.split(""), []);
   const effectiveLength = Math.max(1, length ?? base.length);
-  const [display, setDisplay] = useState(base.padEnd(effectiveLength).slice(0, effectiveLength));
+  const [display, setDisplay] = useState(
+    base.padEnd(effectiveLength).slice(0, effectiveLength),
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -42,7 +45,8 @@ export const ScrambleText: React.FC<ScrambleTextProps> = ({
     const tick = () => {
       if (!mounted) return;
       const src = base.padEnd(effectiveLength).slice(0, effectiveLength);
-      const next = src.split("")
+      const next = src
+        .split("")
         .map((ch) => {
           // keep spacing stable; punctuation optionally
           if (/\s/.test(ch)) return ch;
@@ -65,7 +69,15 @@ export const ScrambleText: React.FC<ScrambleTextProps> = ({
       mounted = false;
       clearInterval(id);
     };
-  }, [base, fps, intensity, charset, mode, effectiveLength, scramblePunctuation]);
+  }, [
+    base,
+    fps,
+    intensity,
+    charset,
+    mode,
+    effectiveLength,
+    scramblePunctuation,
+  ]);
 
   return <Text color={color}>{display}</Text>;
 };

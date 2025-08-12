@@ -126,10 +126,10 @@ export class QSession extends EventEmitter {
 
     // 「You are chatting with」という最後のメッセージを検知
     const finalPattern = /You are chatting with .+/i;
-    
+
     // または、セパレーターライン後の空行を検知
     const separatorEndPattern = /━{10,}[\s\S]*?\n\s*\n/;
-    
+
     if (finalPattern.test(cleanData) || separatorEndPattern.test(cleanData)) {
       if (!this.isInitialized) {
         this.isInitialized = true;
