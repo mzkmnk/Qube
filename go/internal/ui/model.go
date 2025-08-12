@@ -146,6 +146,41 @@ func (m *Model) SetInputEnabled(enabled bool) {
 	m.inputEnabled = enabled
 }
 
+// SetMode はモードを設定する
+func (m *Model) SetMode(mode Mode) {
+	m.mode = mode
+}
+
+// GetMode は現在のモードを取得する
+func (m *Model) GetMode() Mode {
+	return m.mode
+}
+
+// SetStatus はステータスを設定する
+func (m *Model) SetStatus(status Status) {
+	m.status = status
+}
+
+// GetStatus は現在のステータスを取得する
+func (m *Model) GetStatus() Status {
+	return m.status
+}
+
+// IncrementErrorCount はエラーカウントを増加させる
+func (m *Model) IncrementErrorCount() {
+	m.errorCount++
+}
+
+// GetErrorCount はエラーカウントを取得する
+func (m *Model) GetErrorCount() int {
+	return m.errorCount
+}
+
+// SetCurrentCommand は現在実行中のコマンドを設定する
+func (m *Model) SetCurrentCommand(command string) {
+	m.currentCommand = command
+}
+
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch v := msg.(type) {
     case tea.WindowSizeMsg:
