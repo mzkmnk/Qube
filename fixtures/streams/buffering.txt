@@ -1,0 +1,4 @@
+# 不完全行のバッファリング
+Hello, World
+Next line starts then
+continues and completes here
