@@ -85,6 +85,7 @@ type Model struct {
 	title          string  // アプリケーション名
 	version        string  // バージョン番号
 	connected      bool    // 接続状態
+	inputEnabled   bool    // 入力の有効/無効状態
 }
 
 func New() Model {
@@ -100,6 +101,7 @@ func New() Model {
 		title:        "Qube",
 		version:      "0.1.0",
 		connected:    false,
+		inputEnabled: true,
 	}
 }
 
@@ -128,6 +130,16 @@ func (m *Model) AddUserInput(input string) {
 // AddOutput は通常の出力を履歴に追加する
 func (m *Model) AddOutput(output string) {
 	m.lines = append(m.lines, output)
+}
+
+// SetProgressLine は進捗行を設定する
+func (m *Model) SetProgressLine(line string) {
+	m.progressLine = &line
+}
+
+// SetInputEnabled は入力の有効/無効を設定する
+func (m *Model) SetInputEnabled(enabled bool) {
+	m.inputEnabled = enabled
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -218,6 +230,56 @@ func (m Model) renderOutput() string {
 	return strings.Join(result, "\n")
 }
 
+// renderInput は入力部分のレンダリングを行う
+func (m Model) renderInput() string {
+	// スタイル定義
+	boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(0, 1)
+	
+	// プロンプトの選択
+	var prompt string
+	if m.inputEnabled {
+		prompt = "▶ "
+	} else {
+		prompt = "◌ "
+	}
+	
+	// 入力フィールドのレンダリング
+	inputField := prompt + m.input
+	
+	// プレースホルダー表示
+	if m.input == "" && !m.inputEnabled {
+		inputField = prompt + lipgloss.NewStyle().Faint(true).Render("(waiting...)")
+	}
+	
+	return boxStyle.Render(inputField)
+}
+
+// renderStatusBar はステータスバー部分のレンダリングを行う
+func (m Model) renderStatusBar() string {
+	// スタイル定義
+	faint := lipgloss.NewStyle().Faint(true)
+	
+	// コマンドの省略表示（20文字まで）
+	cmd := m.currentCommand
+	if len(cmd) > 20 {
+		cmd = cmd[:17] + "..."
+	}
+	
+	// ヘルプテキスト
+	help := "^C Exit  ↑↓ History  Enter Send"
+	
+	// ステータスバーの組み立て
+	statusBar := fmt.Sprintf("Mode:%s  Status:%s  Errors:%d  Cmd:%s  %s",
+		m.modeStringShort(),
+		m.statusStringShort(),
+		m.errorCount,
+		cmd,
+		help,
+	)
+	
+	return faint.Render(statusBar)
+}
+
 // renderHeader はヘッダー部分のレンダリングを行う
 func (m Model) renderHeader() string {
 	// スタイル定義
@@ -245,30 +307,22 @@ func (m Model) renderHeader() string {
 }
 
 func (m Model) View() string {
-    // スタイル定義
-    boxStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(0, 1)
-    faint := lipgloss.NewStyle().Faint(true)
-
     // ヘッダー
     header := m.renderHeader()
+    
+    // ASCIIロゴ
+    ascii := m.renderQubeASCII()
 
-    // 出力（履歴 + 進捗行）
-    bodyLines := make([]string, 0, len(m.lines)+1)
-    bodyLines = append(bodyLines, m.lines...)
-    if m.progressLine != nil {
-        bodyLines = append(bodyLines, faint.Render(*m.progressLine))
-    }
-    body := boxStyle.Render(strings.Join(bodyLines, "\n"))
+    // 出力
+    output := m.renderOutput()
 
     // 入力
-    prompt := "▶ "
-    input := boxStyle.Render(prompt + m.input)
+    input := m.renderInput()
 
     // ステータスバー
-    help := "^C Exit  ↑↓ History  Enter Send"
-    statusBar := faint.Render(fmt.Sprintf("Mode:%s  Status:%s  Errors:%d  %s", m.modeStringShort(), m.statusStringShort(), m.errorCount, help))
+    statusBar := m.renderStatusBar()
 
-    return strings.Join([]string{header, body, input, statusBar}, "\n")
+    return strings.Join([]string{header, ascii, output, input, statusBar}, "\n")
 }
 
 // 描画用の表記変換ヘルパ
