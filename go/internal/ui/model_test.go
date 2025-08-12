@@ -2,6 +2,7 @@ package ui
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -96,5 +97,45 @@ func Test_Update_CtrlCQuits(t *testing.T) {
 	msg := cmd()
 	if reflect.TypeOf(msg) != reflect.TypeOf(tea.QuitMsg{}) {
 		t.Fatalf("got %T, want tea.QuitMsg", msg)
+	}
+}
+
+// Headerコンポーネントのパリティテスト
+
+func Test_Header_DisplaysTitleAndVersion(t *testing.T) {
+	// ヘッダーにタイトルとバージョンが表示されることを確認
+	m := New()
+	m.SetTitle("Qube")
+	m.SetVersion("0.1.0")
+	
+	view := m.renderHeader()
+	
+	// タイトルが含まれていることを確認
+	if !strings.Contains(view, "Qube") {
+		t.Errorf("Header should contain title 'Qube', got: %s", view)
+	}
+	
+	// バージョンが含まれていることを確認
+	if !strings.Contains(view, "0.1.0") {
+		t.Errorf("Header should contain version '0.1.0', got: %s", view)
+	}
+}
+
+func Test_Header_ShowsConnectionIndicator(t *testing.T) {
+	// 接続インジケータが表示されることを確認
+	m := New()
+	
+	// 非接続状態のテスト
+	m.SetConnected(false)
+	view := m.renderHeader()
+	if !strings.Contains(view, "○") || !strings.Contains(view, "Connecting") {
+		t.Errorf("Header should show disconnected indicator, got: %s", view)
+	}
+	
+	// 接続状態のテスト
+	m.SetConnected(true)
+	view = m.renderHeader()
+	if !strings.Contains(view, "●") || !strings.Contains(view, "Connected") {
+		t.Errorf("Header should show connected indicator, got: %s", view)
 	}
 }
