@@ -91,7 +91,7 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
 
       // グローバルモックセッションを取得
       mockSession = globalMockSession;
-      
+
       // セッション初期化完了をシミュレート
       mockSession?.emit("initialized");
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -118,7 +118,7 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
 
       // グローバルモックセッションを取得
       mockSession = globalMockSession;
-      
+
       // セッション初期化完了をシミュレート
       mockSession?.emit("initialized");
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -144,7 +144,7 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
 
       // グローバルモックセッションを取得
       mockSession = globalMockSession;
-      
+
       // セッション初期化完了をシミュレート
       mockSession?.emit("initialized");
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -168,7 +168,7 @@ describe("Stream Processing Tests - その他のストリーミング処理の�
 
       // グローバルモックセッションを取得
       mockSession = globalMockSession;
-      
+
       // セッション初期化完了をシミュレート
       mockSession?.emit("initialized");
       await new Promise((resolve) => setTimeout(resolve, 50));

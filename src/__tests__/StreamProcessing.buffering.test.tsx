@@ -79,7 +79,7 @@ describe("メッセージバッファリング処理のテスト", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     mockSession = globalMockSession;
-    
+
     // セッション初期化完了をシミュレート
     mockSession?.emit("initialized");
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -108,7 +108,7 @@ describe("メッセージバッファリング処理のテスト", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     mockSession = globalMockSession;
-    
+
     // セッション初期化完了をシミュレート
     mockSession?.emit("initialized");
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -131,7 +131,7 @@ describe("メッセージバッファリング処理のテスト", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     mockSession = globalMockSession;
-    
+
     // セッション初期化完了をシミュレート
     mockSession?.emit("initialized");
     await new Promise((resolve) => setTimeout(resolve, 50));
