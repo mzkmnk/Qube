@@ -153,6 +153,9 @@ func main() {
 
     // セッション初期化完了で Connected に切替、status を ready に戻す
     rawSess.OnInitialized = func() {
+        // ストリームとUIを初期化後のクリーンな状態にする
+        processor.Clear()
+        p.Send(ui.MsgClearScreen{})
         p.Send(ui.MsgSetConnected{Connected: true})
         p.Send(ui.MsgSetStatus{S: ui.StatusReady})
     }

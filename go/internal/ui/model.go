@@ -45,6 +45,8 @@ type MsgSetMode struct{ M Mode }
 type MsgSetInputEnabled struct{ Enabled bool }
 type MsgSetConnected struct{ Connected bool }
 type MsgIncrementError struct{}
+// 画面と出力履歴のクリア要求
+type MsgClearScreen struct{}
 
 // History はポインタ移動可能なシンプルなコマンド履歴。
 // 連続重複の除外やポインタ移動など、Node 版（src/lib/history.ts）に概ね合わせる。
@@ -295,6 +297,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     case MsgIncrementError:
         m.IncrementErrorCount()
         return m, nil
+    case MsgClearScreen:
+        // 出力履歴と進捗をクリア
+        m.lines = []string{}
+        m.progressLine = nil
+        // 物理画面もクリア（スクロールバック含め可能な範囲で）
+        return m, func() tea.Msg {
+            // ESC[3J: スクロールバック消去, ESC[H: カーソル先頭, ESC[2J: 画面消去
+            print("\x1b[3J\x1b[H\x1b[2J")
+            return nil
+        }
     case tea.KeyMsg:
         switch v.Type {
         case tea.KeyCtrlC:
