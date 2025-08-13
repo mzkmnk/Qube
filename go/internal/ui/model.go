@@ -6,7 +6,6 @@ import (
 
     tea "github.com/charmbracelet/bubbletea"
     "github.com/charmbracelet/lipgloss"
-    viewport "github.com/charmbracelet/bubbles/viewport"
 )
 
 // Mode は UI の動作モードを表す。
@@ -100,45 +99,41 @@ type CommandExecutorInterface interface {
 // Model は最小プロトタイプに必要な UI の状態を保持する。
 
 type Model struct {
-    mode           Mode
-    status         Status
-    input          string
-    history        History
-    lines          []string
-    progressLine   *string
-    errorCount     int
-    currentCommand string
-    title          string  // アプリケーション名
-    version        string  // バージョン番号
-    connected      bool    // 接続状態
-    inputEnabled   bool    // 入力の有効/無効状態
-    width          int     // ターミナルの幅
-    height         int     // ターミナルの高さ
-    executor       CommandExecutorInterface // コマンド実行を管理
-
-    // 内部スクロール用ビューポート
-    vp             viewport.Model
+	mode           Mode
+	status         Status
+	input          string
+	history        History
+	lines          []string
+	progressLine   *string
+	errorCount     int
+	currentCommand string
+	title          string  // アプリケーション名
+	version        string  // バージョン番号
+	connected      bool    // 接続状態
+	inputEnabled   bool    // 入力の有効/無効状態
+	width          int     // ターミナルの幅
+	height         int     // ターミナルの高さ
+	executor       CommandExecutorInterface // コマンド実行を管理
 }
 
 func New() Model {
-    return Model{
-        mode:         ModeCommand,
-        status:       StatusReady,
-        input:        "",
-        history:      NewHistory(),
-        lines:        []string{},
-        progressLine: nil,
-        errorCount:   0,
-        currentCommand: "",
-        title:        "Qube",
-        version:      "0.1.0",
-        connected:    false,
-        inputEnabled: true,
-        width:        80,  // デフォルト幅
-        height:       24,  // デフォルト高さ
-        executor:     nil, // 後でSetExecutorで設定
-        vp:           viewport.New(78, 8),
-    }
+	return Model{
+		mode:         ModeCommand,
+		status:       StatusReady,
+		input:        "",
+		history:      NewHistory(),
+		lines:        []string{},
+		progressLine: nil,
+		errorCount:   0,
+		currentCommand: "",
+		title:        "Qube",
+		version:      "0.1.0",
+		connected:    false,
+		inputEnabled: true,
+		width:        80,  // デフォルト幅
+		height:       24,  // デフォルト高さ
+		executor:     nil, // 後でSetExecutorで設定
+	}
 }
 
 // NewWithExecutor はCommandExecutorを指定してModelを作成する
@@ -262,24 +257,12 @@ func (m *Model) SetCurrentCommand(command string) {
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-    var cmds []tea.Cmd
-    // ビューポートへもメッセージを委譲（スクロールキー/マウス対応）
-    if m.vp.Width > 0 {
-        if vpModel, cmd := m.vp.Update(msg); cmd != nil {
-            m.vp = vpModel
-            cmds = append(cmds, cmd)
-        } else {
-            m.vp = vpModel
-        }
-    }
-
     switch v := msg.(type) {
     case tea.WindowSizeMsg:
         // ターミナルサイズが変更された時
         m.width = v.Width
         m.height = v.Height
-        m.resizeViewport()
-        return m, tea.Batch(cmds...)
+        return m, nil
     case MsgSubmit:
         // MsgSubmitを受け取った時にCommandExecutorを呼び出す
         if m.executor != nil {
@@ -288,49 +271,42 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                 _ = m.executor.Execute(v.Value)
             }()
         }
-        return m, tea.Batch(cmds...)
+        return m, nil
     case MsgAddOutput:
-        wasBottom := m.vp.AtBottom()
         m.AddOutput(v.Line)
-        m.refreshViewport(wasBottom)
-        return m, tea.Batch(cmds...)
+        return m, nil
     case MsgSetProgress:
         if v.Clear {
             m.progressLine = nil
         } else {
             m.SetProgressLine(v.Line)
         }
-        // 進捗は末尾表示に反映
-        m.refreshViewport(false)
-        return m, tea.Batch(cmds...)
+        return m, nil
     case MsgSetStatus:
         m.SetStatus(v.S)
-        return m, tea.Batch(cmds...)
+        return m, nil
     case MsgSetMode:
         m.SetMode(v.M)
-        return m, tea.Batch(cmds...)
+        return m, nil
     case MsgSetInputEnabled:
         m.SetInputEnabled(v.Enabled)
-        return m, tea.Batch(cmds...)
+        return m, nil
     case MsgSetConnected:
         m.SetConnected(v.Connected)
-        return m, tea.Batch(cmds...)
+        return m, nil
     case MsgIncrementError:
         m.IncrementErrorCount()
-        return m, tea.Batch(cmds...)
+        return m, nil
     case MsgClearScreen:
         // 出力履歴と進捗をクリア
         m.lines = []string{}
         m.progressLine = nil
         // 物理画面もクリア（スクロールバック含め可能な範囲で）
-        m.refreshViewport(true)
-        clearCmd := func() tea.Msg {
+        return m, func() tea.Msg {
             // ESC[3J: スクロールバック消去, ESC[H: カーソル先頭, ESC[2J: 画面消去
             print("\x1b[3J\x1b[H\x1b[2J")
             return nil
         }
-        cmds = append(cmds, clearCmd)
-        return m, tea.Batch(cmds...)
     case tea.KeyMsg:
         switch v.Type {
         case tea.KeyCtrlC:
@@ -341,9 +317,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             m.history.Add(text)
             m.input = ""
             // ユーザー入力を表示に追加
-            wasBottom := m.vp.AtBottom()
             m.AddUserInput(text)
-            m.refreshViewport(wasBottom)
             return m, func() tea.Msg { return MsgSubmit{Value: text} }
         case tea.KeyBackspace, tea.KeyCtrlH:
             // バックスペースで末尾 1 文字（rune）を削除
@@ -351,25 +325,25 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                 r := []rune(m.input)
                 if len(r) > 0 { m.input = string(r[:len(r)-1]) }
             }
-            return m, tea.Batch(cmds...)
+            return m, nil
         case tea.KeyRunes:
             // 入力された文字（rune）を末尾に追加
             if len(v.Runes) > 0 {
                 m.input += string(v.Runes)
             }
-            return m, tea.Batch(cmds...)
+            return m, nil
         case tea.KeyUp:
             if s, ok := m.history.Prev(); ok { m.input = s }
-            return m, tea.Batch(cmds...)
+            return m, nil
         case tea.KeyDown:
             if s, ok := m.history.Next(); ok { m.input = s }
-            return m, tea.Batch(cmds...)
+            return m, nil
         default:
             // 最小プロトタイプのためそれ以外は無視
-            return m, tea.Batch(cmds...)
+            return m, nil
         }
     }
-    return m, tea.Batch(cmds...)
+    return m, nil
 }
 
 // renderQubeASCII はQUBEのASCIIロゴを生成する
@@ -391,7 +365,7 @@ func (m Model) renderQubeASCII() string {
 
 // renderOutput は出力部分のレンダリングを行う
 func (m Model) renderOutput() string {
-    var result []string
+	var result []string
 	
 	// スタイル定義
 	userStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("14")) // シアン
@@ -418,10 +392,7 @@ func (m Model) renderOutput() string {
 		result = append(result, faintStyle.Render(*m.progressLine))
 	}
 	
-    content := strings.Join(result, "\n")
-    // ビューポートに反映（スクロール位置は Update 側で維持）
-    m.vp.SetContent(content)
-    return m.vp.View()
+	return strings.Join(result, "\n")
 }
 
 // renderInput は入力部分のレンダリングを行う
@@ -516,7 +487,7 @@ func (m Model) View() string {
     // ASCIIロゴ
     ascii := m.renderQubeASCII()
 
-    // 出力（ビューポート）
+    // 出力
     output := m.renderOutput()
 
     // 入力
@@ -574,31 +545,5 @@ func (m Model) statusStringShort() string {
         return "error"
     default:
         return "?"
-    }
-}
-
-// 画面サイズに基づきビューポートを調整
-func (m *Model) resizeViewport() {
-    // 固定要素の高さを概算
-    // header:1, ascii:7, input box:3, status:1
-    reserved := 1 + 7 + 3 + 1
-    h := m.height - reserved
-    if h < 3 { h = 3 }
-    w := m.width - 2
-    if w < 10 { w = m.width }
-    m.vp.Width = w
-    m.vp.Height = h
-    m.refreshViewport(false)
-}
-
-// 現在のlinesとprogressからビューポート内容を更新
-func (m *Model) refreshViewport(stickBottom bool) {
-    // stickBottomは更新前にAtBottomだった時に最下部へスクロールする
-    _ = stickBottom // 実際のスクロールはSetContent後に行う
-    _ = m.vp // 避けの参照
-    // 内容はrenderOutput内でSetContentする
-    _ = m.renderOutput()
-    if stickBottom && m.vp.Height > 0 {
-        m.vp.GotoBottom()
     }
 }
