@@ -103,22 +103,24 @@ func Test_Update_CtrlCQuits(t *testing.T) {
 
 // Headerコンポーネントのパリティテスト
 
-func Test_Header_DisplaysTitleAndVersion(t *testing.T) {
-	// ヘッダーにタイトルとバージョンが表示されることを確認
+func Test_Header_DisplaysConnectionOnly(t *testing.T) {
+	// ヘッダーに接続状態のみが表示されることを確認
 	m := New()
-	m.SetTitle("Qube")
-	m.SetVersion("0.1.0")
 	
+	// 未接続状態のテスト
+	m.SetConnected(false)
 	view := m.renderHeader()
 	
-	// タイトルが含まれていることを確認
-	if !strings.Contains(view, "Qube") {
-		t.Errorf("Header should contain title 'Qube', got: %s", view)
+	if !strings.Contains(view, "Connecting") {
+		t.Errorf("Header should contain 'Connecting' when disconnected, got: %s", view)
 	}
 	
-	// バージョンが含まれていることを確認
-	if !strings.Contains(view, "0.1.0") {
-		t.Errorf("Header should contain version '0.1.0', got: %s", view)
+	// 接続状態のテスト
+	m.SetConnected(true)
+	view = m.renderHeader()
+	
+	if !strings.Contains(view, "Connected") {
+		t.Errorf("Header should contain 'Connected' when connected, got: %s", view)
 	}
 }
 
@@ -342,9 +344,9 @@ func TestScrambleAnimationIntegration(t *testing.T) {
 		t.Error("renderProgressLine() should return non-empty string for Thinking progress")
 	}
 	
-	// 黄色のスタイルが適用されているかチェック（ANSI color code for yellow）
-	if !strings.Contains(rendered, "38;5;11") {
-		t.Log("Yellow color might not be applied, but this could be a rendering issue")
+	// マゼンタのスタイルが適用されているかチェック（ANSI color code for magenta）
+	if !strings.Contains(rendered, "38;5;13") {
+		t.Log("Magenta color might not be applied, but this could be a rendering issue")
 	}
 }
 

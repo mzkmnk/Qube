@@ -348,11 +348,11 @@ func (m *Model) buildContent() string {
 func (m *Model) renderAllOutput() string {
 	var result []string
 	
-	// スタイル定義
-	userStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("14")) // シアン
+	// スタイル定義 - 紫と青の組み合わせ
+	userStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("165")) // 紫（テキスト）
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("14")).
+		BorderForeground(lipgloss.Color("93")). // 青（枠線）
 		Width(m.width - 2)
 	
 	// 全ての行を表示
@@ -523,18 +523,27 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // renderQubeASCII はQUBEのASCIIロゴを生成する
 func (m Model) renderQubeASCII() string {
 	// シンプルなASCIIアート（figlet風）
-	ascii := `
-  ___   _   _  ____   _____ 
- / _ \ | | | ||  _ \ | ____|
-| | | || | | || |_) ||  _|  
-| |_| || |_| ||  _ < | |___ 
- \__\_\ \___/ |_| \_\|_____|
-                             
-       Q U B E  v0.1.0       `
+	asciiLines := []string{
+		"  ___   _   _  ____   _____ ",
+		" / _ \\ | | | ||  _ \\ | ____|",
+		"| | | || | | || |_) ||  _|  ",
+		"| |_| || |_| ||  _ < | |___ ",
+		" \\__\\_\\ \\___/ |_| \\_\\|_____|",
+		"                             ",
+
+	}
 	
-	// lipglossでカラー適用
-	logoStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("201")) // マゼンタ
-	return logoStyle.Render(ascii)
+	// 紫系グラデーション色（256色パレット）
+	gradientColors := []string{"165", "129", "93", "57", "21", "90", "126"} // 紫系のグラデーション
+	
+	var result []string
+	for i, line := range asciiLines {
+		colorIndex := i % len(gradientColors)
+		style := lipgloss.NewStyle().Foreground(lipgloss.Color(gradientColors[colorIndex]))
+		result = append(result, style.Render(line))
+	}
+	
+	return strings.Join(result, "\n")
 }
 
 // renderInput は入力部分のレンダリングを行う
@@ -616,16 +625,10 @@ func (m Model) renderStatusBar() string {
 // renderHeader はヘッダー部分のレンダリングを行う
 func (m Model) renderHeader() string {
 	// スタイル定義
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("201")) // マゼンタ
-	versionStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8")) // グレー
 	connectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("10")) // 緑
-	disconnectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("11")) // 黄色
+	disconnectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("13")) // 黄色
 	
-	// タイトルとバージョン
-	titlePart := fmt.Sprintf("◆ %s", titleStyle.Render(m.title))
-	versionPart := versionStyle.Render(fmt.Sprintf("v%s", m.version))
-	
-	// 接続インジケータ
+	// 接続インジケータのみ表示
 	var connectionPart string
 	if m.connected {
 		connectionPart = connectedStyle.Render("● Connected")
@@ -633,8 +636,8 @@ func (m Model) renderHeader() string {
 		connectionPart = disconnectedStyle.Render("○ Connecting...")
 	}
 	
-	// ヘッダー行を組み立て
-	header := fmt.Sprintf("%s %s                    %s", titlePart, versionPart, connectionPart)
+	// ヘッダー行を組み立て（接続状態のみ）
+	header := connectionPart
 	
 	return header
 }
@@ -793,11 +796,11 @@ func (m *Model) renderProgressLine() string {
 	if strings.Contains(strings.ToLower(line), "thinking") {
 		// スクランブルアニメーション中の場合はスクランブルテキストを表示
 		if m.scrambleActive && m.scrambleText != "" {
-			scrambleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("11")) // 黄色
+			scrambleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("13")) // 黄色
 			return scrambleStyle.Render(m.scrambleText)
 		} else {
 			// アニメーション未開始の場合は元のテキストを表示
-			scrambleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("11")) // 黄色
+			scrambleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("13")) // 黄色
 			return scrambleStyle.Render("Thinking...")
 		}
 	} else {
