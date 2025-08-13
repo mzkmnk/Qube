@@ -4,55 +4,61 @@
 
 ## プロジェクト概要
 
-Qube は Amazon Q CLI のための React ベースの TUI（ターミナルユーザーインターフェース）ラッパーで、TypeScript と Ink フレームワークで構築されています。このプロジェクトは、コマンド履歴、出力ストリーミング、直感的なキーバインディングなどの機能を備えた、Amazon Q CLI のインタラクティブなシェル体験を提供することを目的としています。
+Qube は Amazon Q CLI のための Go ベースの TUI（ターミナルユーザーインターフェース）ラッパーで、Go と Bubble Tea フレームワークで構築されています。このプロジェクトは、コマンド履歴、出力ストリーミング、直感的なキーバインディングなどの機能を備えた、Amazon Q CLI のインタラクティブなシェル体験を提供することを目的としています。
 
 ## 主要コマンド
 
 ### 開発
-- `npm run dev` - tsx によるホットリロード付き開発サーバー起動 (src/cli.tsx)
-- `npm run build` - TypeScript を dist/ ディレクトリにビルド
-- `npm start` - コンパイル済みCLIを dist/cli.js から実行
-- `npm test` - Vitest でテスト実行（設定後）
+- `go run cmd/qube/main.go` - 開発用実行
+- `go build -o qube cmd/qube/main.go` - バイナリビルド
+- `./qube` - コンパイル済みバイナリ実行
+- `go test ./...` - テスト実行
 
 ### ビルドプロセス
-1. TypeScript コンパイル: `tsc src/cli.tsx --outDir dist`
-2. 出力: dist/ ディレクトリに ES modules
-3. エントリポイント: dist/cli.js（CLI実行用のshebangが必要）
+1. Go コンパイル: `go build -o qube cmd/qube/main.go`
+2. 出力: qube バイナリファイル（実行可能）
+3. エントリポイント: cmd/qube/main.go
 
 ## アーキテクチャ
 
 ### 技術スタック
-- **ランタイム**: Node.js 22+ (ES modules)
-- **UIフレームワーク**: Ink 6.x + React 19.x（ターミナルレンダリング用）
-- **言語**: TypeScript（strict mode有効）
-- **ビルドツール**: 開発時は tsx、本番用は tsc
+- **ランタイム**: Go 1.24.3+
+- **UIフレームワーク**: Bubble Tea（ターミナルレンダリング用）
+- **言語**: Go
+- **ビルドツール**: go build
 
 ### プロジェクト構造
 ```
 /
-├── src/
-│   ├── cli.tsx            # メインエントリポイント
-│   ├── components/        # UIコンポーネント (Output, Input など)
-│   ├── lib/              # ユーティリティ (history, spawn, config)
-│   └── types/            # TypeScript型定義
-├── tasks/                # 開発タスクドキュメント
-└── dist/                # ビルド出力 (gitignore対象)
+├── cmd/
+│   └── qube/
+│       └── main.go       # メインエントリポイント
+├── internal/             # 内部パッケージ
+│   ├── ui/              # UIモデル（Bubble Tea）
+│   ├── execq/           # Q CLI実行機能
+│   ├── executor/        # コマンド実行管理
+│   ├── session/         # セッション管理
+│   ├── stream/          # ストリーム処理
+│   └── ...
+├── tasks/               # 開発タスクドキュメント
+├── go.mod              # Go module定義
+└── qube                # ビルド済みバイナリ (gitignore対象)
 ```
 
-### コアコンポーネント（計画中）
-1. **Q CLI 統合** (タスク 03)
+### コアコンポーネント（実装済み）
+1. **Q CLI 統合** (internal/execq)
    - バイナリ検出: 環境変数 > PATH検索
    - ストリーム処理を伴うプロセス起動
    - タイムアウトと非ゼロ終了のエラーハンドリング
 
-2. **TUI シェル** (タスク 04)
-   - タイトル/バージョン付きヘッダー
+2. **TUI シェル** (internal/ui)
+   - Bubble Teaベースのインターフェース
    - スクロール可能な出力パネル
    - 履歴付きコマンド入力
-   - ステータスバー
-   - キーバインド: Enter（実行）、Ctrl+C（終了）、Ctrl+L（クリア）、↑↓（履歴）
+   - ステータス表示
+   - キーバインド: Enter（実行）、Ctrl+C（終了）、Ctrl+L（クリア）
 
-3. **ストリーム処理** (タスク 05)
+3. **ストリーム処理** (internal/stream)
    - ANSIエスケープシーケンス処理
    - JSON/Markdown解析
    - リアルタイム出力レンダリング
@@ -89,19 +95,19 @@ refactor: エラーメッセージ生成を関数に抽出 (Refactor)
 ```
 
 ### コードスタイル
-- TypeScript（ES Modules使用）
-- インデント: スペース2つ
-- ファイル名: kebab-case
-- コンポーネント: PascalCase、関数コンポーネント
-- named export を優先
-- コンポーネントは小さく、単一責務を保つ
+- Go（標準的なGoスタイル）
+- フォーマット: gofmt
+- ファイル名: snake_case（Goの慣習）
+- パッケージ: lowercase
+- 関数/型: PascalCase（公開）、camelCase（非公開）
+- 関数は小さく、単一責務を保つ
 
 ### テスト戦略
-- フレームワーク: Vitest（推奨）
-- 配置: src/__tests__/ または同階層の *.test.ts(x)
-- Ink の入出力はモック化
+- フレームワーク: Go標準testing
+- 配置: 同パッケージ内の *_test.go
+- 外部依存はモック化
 - 重要処理は ≥80% カバレッジを目標
-- フォーカス: spawn処理、ストリーム解析、エラーケース
+- フォーカス: プロセス実行、ストリーム解析、エラーケース
 
 ### テスト作成時の注意点
 - 各テストは独立して実行可能にする
@@ -109,16 +115,20 @@ refactor: エラーメッセージ生成を関数に抽出 (Refactor)
 - モックは最小限に留め、可能な限り実際の動作に近いテストを書く
 - エッジケースと異常系を必ずカバーする
 
-## 重要タスクのロードマップ
+## 実装状況
 
-1. **CLI ブートストラップ** - bin エントリ、tsconfig、実行可能ビルドの設定
-2. **TDD セットアップ** - Vitest 設定とサンプルテスト
-3. **Q CLI 検出** - バイナリ検出とプロセス起動
-4. **TUI シェル** - Ink コンポーネントによる基本UI
-5. **ストリームハンドリング** - ANSI/JSON/Markdown解析
-6. **コマンドとフラグ** - 引数解析と検証
-7. **設定とテレメトリ** - 設定管理
-8. **E2Eテスト** - 統合のためのスモークテスト
+✅ **完了済み**
+1. **Go移行** - TypeScript版からGo版への完全移行
+2. **Q CLI検出** - バイナリ検出とプロセス起動 (internal/execq)
+3. **TUIシェル** - Bubble Teaによる基本UI (internal/ui)  
+4. **ストリーム処理** - ANSI/JSON/Markdown解析 (internal/stream)
+5. **セッション管理** - 長時間セッションの管理 (internal/session)
+6. **コマンド実行** - 短命・セッション型コマンド実行 (internal/executor)
+
+🚧 **今後の拡張**
+- 設定管理とテレメトリ
+- 高度なキーバインディング
+- E2Eテストの充実
 
 ## セキュリティ注意事項
 - シークレットやAPIキーを絶対にコミットしない
