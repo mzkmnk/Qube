@@ -1,11 +1,23 @@
+# Go binaries
+qube
+qube-*
+
+# Node.js (legacy)
 node_modules/
 dist/
 coverage/
-go/.gocache/
+
+# Logs
 *.log
+
+# OS
 .DS_Store
+
+# Environment
 .env
 .env.local
+
+# IDEs
 .vscode/
 .idea/
 
