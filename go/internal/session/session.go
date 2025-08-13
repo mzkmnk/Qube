@@ -65,11 +65,16 @@ func (s *Session) Start(mode string) error {
     }
 
     s.cmd = exec.Command(args[0], args[1:]...)
+    // Node版と同様にTERMを明示
+    s.cmd.Env = append(os.Environ(), "TERM=xterm-256color")
     f, err := ptypkg.Start(s.cmd)
     if err != nil {
         return err
     }
     s.pty = f
+
+    // デフォルトのPTYサイズを指定（Node版: cols=80, rows=30）
+    _ = ptypkg.Setsize(s.pty, &ptypkg.Winsize{Rows: 30, Cols: 80})
 
     // Reader ゴルーチン
     go func() {
