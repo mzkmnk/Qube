@@ -36,6 +36,16 @@ const (
 
 type MsgSubmit struct{ Value string }
 
+// 外部イベント用の追加メッセージ
+// goroutine から UI を安全に更新するため、tea.Program.Send で送出する
+type MsgAddOutput struct{ Line string }
+type MsgSetProgress struct{ Line string; Clear bool }
+type MsgSetStatus struct{ S Status }
+type MsgSetMode struct{ M Mode }
+type MsgSetInputEnabled struct{ Enabled bool }
+type MsgSetConnected struct{ Connected bool }
+type MsgIncrementError struct{}
+
 // History はポインタ移動可能なシンプルなコマンド履歴。
 // 連続重複の除外やポインタ移動など、Node 版（src/lib/history.ts）に概ね合わせる。
 
@@ -259,6 +269,31 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                 _ = m.executor.Execute(v.Value)
             }()
         }
+        return m, nil
+    case MsgAddOutput:
+        m.AddOutput(v.Line)
+        return m, nil
+    case MsgSetProgress:
+        if v.Clear {
+            m.progressLine = nil
+        } else {
+            m.SetProgressLine(v.Line)
+        }
+        return m, nil
+    case MsgSetStatus:
+        m.SetStatus(v.S)
+        return m, nil
+    case MsgSetMode:
+        m.SetMode(v.M)
+        return m, nil
+    case MsgSetInputEnabled:
+        m.SetInputEnabled(v.Enabled)
+        return m, nil
+    case MsgSetConnected:
+        m.SetConnected(v.Connected)
+        return m, nil
+    case MsgIncrementError:
+        m.IncrementErrorCount()
         return m, nil
     case tea.KeyMsg:
         switch v.Type {

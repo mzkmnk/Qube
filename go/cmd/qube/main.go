@@ -82,68 +82,70 @@ func main() {
     
     // UIモデルを作成し、CommandExecutorを設定
     m := ui.NewWithExecutor(cmdExecutor)
-    
-    // セッションからの出力をStreamProcessor経由でUIに伝播
+
+    // Program を先に作成して、goroutine から安全に UI を更新する
+    p := tea.NewProgram(&m)
+
+    // セッションからの出力をStreamProcessor経由でUIに伝播（Program.Send 経由）
     rawSess.OnData = func(data []byte) {
         lines := processor.Process(string(data))
         for _, line := range lines {
-            m.AddOutput(line)
+            p.Send(ui.MsgAddOutput{Line: line})
         }
         // progressLineの処理
         if progressLine := processor.GetProgressLine(); progressLine != "" {
-            m.SetProgressLine(progressLine)
+            p.Send(ui.MsgSetProgress{Line: progressLine, Clear: false})
+        } else {
+            p.Send(ui.MsgSetProgress{Clear: true})
         }
     }
-    
+
     rawSess.OnError = func(err error) {
-        m.IncrementErrorCount()
-        m.AddOutput("Session Error: " + err.Error())
+        p.Send(ui.MsgIncrementError{})
+        p.Send(ui.MsgAddOutput{Line: "Session Error: " + err.Error()})
     }
-    
+
     // イベントハンドラーを設定（UIのSetExecutorを上書き）
     cmdExecutor.SetEventHandlers(
         func(status string) {
-            // UIの既存処理を維持
             switch status {
             case "ready":
-                m.SetStatus(ui.StatusReady)
-                m.SetInputEnabled(true)
+                p.Send(ui.MsgSetStatus{S: ui.StatusReady})
+                p.Send(ui.MsgSetInputEnabled{Enabled: true})
             case "running":
-                m.SetStatus(ui.StatusRunning)
-                m.SetInputEnabled(false)
+                p.Send(ui.MsgSetStatus{S: ui.StatusRunning})
+                p.Send(ui.MsgSetInputEnabled{Enabled: false})
             case "error":
-                m.SetStatus(ui.StatusError)
-                m.SetInputEnabled(true)
+                p.Send(ui.MsgSetStatus{S: ui.StatusError})
+                p.Send(ui.MsgSetInputEnabled{Enabled: true})
             }
         },
         func(mode string) {
-            // UIの既存処理を維持
             if mode == "session" {
-                m.SetMode(ui.ModeSession)
+                p.Send(ui.MsgSetMode{M: ui.ModeSession})
+                p.Send(ui.MsgSetConnected{Connected: true})
             } else {
-                m.SetMode(ui.ModeCommand)
+                p.Send(ui.MsgSetMode{M: ui.ModeCommand})
             }
         },
         func(output string) {
             // 短命コマンドの出力はそのまま追加
-            m.AddOutput(output)
+            p.Send(ui.MsgAddOutput{Line: output})
         },
         func(err error) {
-            // UIの既存処理を維持
-            m.IncrementErrorCount()
-            m.AddOutput("Error: " + err.Error())
+            p.Send(ui.MsgIncrementError{})
+            p.Send(ui.MsgAddOutput{Line: "Error: " + err.Error()})
         },
     )
-    
+
     // 初期化時に自動的にchatセッションを開始
     go func() {
         if err := cmdExecutor.Execute("q chat"); err != nil {
             log.Printf("Failed to start initial chat session: %v", err)
         }
     }()
-    
-    if _, err := tea.NewProgram(&m).Run(); err != nil {
+
+    if _, err := p.Run(); err != nil {
         log.Fatal(err)
     }
 }
-
