@@ -25,7 +25,7 @@ jobs:
         run: go vet ./...
 
       - name: Build
-        run: go build -o qube cmd/qube/main.go
+        run: go build -o qube ./cmd/qube
 
       - name: Test
         run: go test -v ./...
