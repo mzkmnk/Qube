@@ -6,6 +6,7 @@ import (
 
     tea "github.com/charmbracelet/bubbletea"
     "github.com/charmbracelet/lipgloss"
+    "github.com/charmbracelet/bubbles/viewport"
 )
 
 // Mode は UI の動作モードを表す。
@@ -113,6 +114,8 @@ type Model struct {
 	inputEnabled   bool    // 入力の有効/無効状態
 	width          int     // ターミナルの幅
 	height         int     // ターミナルの高さ
+	viewport       viewport.Model // アプリ全体のスクロール管理
+	ready          bool    // viewportの準備ができているか
 	executor       CommandExecutorInterface // コマンド実行を管理
 }
 
@@ -132,6 +135,7 @@ func New() Model {
 		inputEnabled: true,
 		width:        80,  // デフォルト幅
 		height:       24,  // デフォルト高さ
+		ready:        false, // viewport初期化前
 		executor:     nil, // 後でSetExecutorで設定
 	}
 }
@@ -204,16 +208,29 @@ func (m *Model) SetConnected(connected bool) {
 // AddUserInput はユーザー入力を履歴に追加する
 func (m *Model) AddUserInput(input string) {
 	m.lines = append(m.lines, "USER_INPUT:"+input)
+	m.updateViewportContent()
 }
 
 // AddOutput は通常の出力を履歴に追加する
 func (m *Model) AddOutput(output string) {
 	m.lines = append(m.lines, output)
+	m.updateViewportContent()
 }
 
 // SetProgressLine は進捗行を設定する
 func (m *Model) SetProgressLine(line string) {
 	m.progressLine = &line
+	m.updateViewportContent()
+}
+
+// updateViewportContent はviewportのコンテンツを更新する
+func (m *Model) updateViewportContent() {
+	if m.ready {
+		content := m.buildScrollableContent()
+		m.viewport.SetContent(content)
+		// 自動的に最下部にスクロール
+		m.viewport.GotoBottom()
+	}
 }
 
 // SetInputEnabled は入力の有効/無効を設定する
@@ -256,12 +273,109 @@ func (m *Model) SetCurrentCommand(command string) {
 	m.currentCommand = command
 }
 
+// buildScrollableContent はviewportに表示するスクロール可能部分を構築する
+func (m *Model) buildScrollableContent() string {
+	// ヘッダー
+	header := m.renderHeader()
+	
+	// ASCIIロゴ
+	ascii := m.renderQubeASCII()
+
+	// 出力履歴
+	output := m.renderAllOutput()
+
+	// progressLineがある場合は追加
+	if m.progressLine != nil {
+		faintStyle := lipgloss.NewStyle().Faint(true)
+		output += "\n" + faintStyle.Render(*m.progressLine)
+	}
+
+	return strings.Join([]string{header, ascii, output}, "\n")
+}
+
+// buildContent は全体のコンテンツを構築する（viewport初期化前の互換性用）
+func (m *Model) buildContent() string {
+	// ヘッダー
+	header := m.renderHeader()
+	
+	// ASCIIロゴ
+	ascii := m.renderQubeASCII()
+
+	// 出力履歴
+	output := m.renderAllOutput()
+
+	// progressLineがある場合は追加
+	if m.progressLine != nil {
+		faintStyle := lipgloss.NewStyle().Faint(true)
+		output += "\n" + faintStyle.Render(*m.progressLine)
+	}
+
+	// 入力
+	input := m.renderInput()
+
+	// ステータスバー
+	statusBar := m.renderStatusBar()
+
+	return strings.Join([]string{header, ascii, output, input, statusBar}, "\n")
+}
+
+// renderAllOutput は全ての出力を表示する（スクロール制御なし）
+func (m *Model) renderAllOutput() string {
+	var result []string
+	
+	// スタイル定義
+	userStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("14")) // シアン
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("14")).
+		Width(m.width - 2)
+	
+	// 全ての行を表示
+	for _, line := range m.lines {
+		if strings.HasPrefix(line, "USER_INPUT:") {
+			// ユーザー入力は枠線付きで表示
+			message := strings.TrimPrefix(line, "USER_INPUT:")
+			userLine := userStyle.Render("▶ " + message)
+			result = append(result, boxStyle.Render(userLine))
+		} else {
+			// 通常の出力はそのまま表示
+			result = append(result, line)
+		}
+	}
+	
+	return strings.Join(result, "\n")
+}
+
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+    var cmd tea.Cmd
+    
     switch v := msg.(type) {
     case tea.WindowSizeMsg:
         // ターミナルサイズが変更された時
         m.width = v.Width
         m.height = v.Height
+        
+        if !m.ready {
+            // 初回のウィンドウサイズ設定時にviewportを初期化
+            // 固定部分の高さを計算：入力(3行) + ステータスバー(1行) = 4行
+            viewportHeight := v.Height - 4
+            if viewportHeight < 10 {
+                viewportHeight = 10 // 最小高さを確保
+            }
+            m.viewport = viewport.New(v.Width, viewportHeight)
+            m.viewport.SetContent(m.buildScrollableContent())
+            m.viewport.GotoBottom() // 初期位置は最下部
+            m.ready = true
+        } else {
+            // サイズ変更時はviewportのサイズを更新
+            viewportHeight := v.Height - 4
+            if viewportHeight < 10 {
+                viewportHeight = 10
+            }
+            m.viewport.Width = v.Width
+            m.viewport.Height = viewportHeight
+            m.updateViewportContent()
+        }
         return m, nil
     case MsgSubmit:
         // MsgSubmitを受け取った時にCommandExecutorを呼び出す
@@ -301,6 +415,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         // 出力履歴と進捗をクリア
         m.lines = []string{}
         m.progressLine = nil
+        // viewportのコンテンツもクリア
+        m.updateViewportContent()
         // 物理画面もクリア（スクロールバック含め可能な範囲で）
         return m, func() tea.Msg {
             // ESC[3J: スクロールバック消去, ESC[H: カーソル先頭, ESC[2J: 画面消去
@@ -333,17 +449,27 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             }
             return m, nil
         case tea.KeyUp:
+            // 履歴ナビゲーション
             if s, ok := m.history.Prev(); ok { m.input = s }
             return m, nil
         case tea.KeyDown:
+            // 履歴ナビゲーション
             if s, ok := m.history.Next(); ok { m.input = s }
             return m, nil
         default:
-            // 最小プロトタイプのためそれ以外は無視
-            return m, nil
+            // その他のキー（スクロール関連含む）はviewportに委譲
+            if m.ready {
+                m.viewport, cmd = m.viewport.Update(msg)
+            }
+            return m, cmd
+        }
+    default:
+        // マウス操作など、その他のメッセージもviewportに委譲
+        if m.ready {
+            m.viewport, cmd = m.viewport.Update(msg)
         }
     }
-    return m, nil
+    return m, cmd
 }
 
 // renderQubeASCII はQUBEのASCIIロゴを生成する
@@ -361,38 +487,6 @@ func (m Model) renderQubeASCII() string {
 	// lipglossでカラー適用
 	logoStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("201")) // マゼンタ
 	return logoStyle.Render(ascii)
-}
-
-// renderOutput は出力部分のレンダリングを行う
-func (m Model) renderOutput() string {
-	var result []string
-	
-	// スタイル定義
-	userStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("14")) // シアン
-	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("14")).
-		Width(m.width - 2)
-	
-	for _, line := range m.lines {
-		if strings.HasPrefix(line, "USER_INPUT:") {
-			// ユーザー入力は枠線付きで表示
-			message := strings.TrimPrefix(line, "USER_INPUT:")
-			userLine := userStyle.Render("▶ " + message)
-			result = append(result, boxStyle.Render(userLine))
-		} else {
-			// 通常の出力はそのまま表示
-			result = append(result, line)
-		}
-	}
-	
-	// progressLineがある場合は追加
-	if m.progressLine != nil {
-		faintStyle := lipgloss.NewStyle().Faint(true)
-		result = append(result, faintStyle.Render(*m.progressLine))
-	}
-	
-	return strings.Join(result, "\n")
 }
 
 // renderInput は入力部分のレンダリングを行う
@@ -440,16 +534,33 @@ func (m Model) renderStatusBar() string {
 	}
 	
 	// ヘルプテキスト
-	help := "^C Exit  ↑↓ History  Enter Send"
+	help := "^C Exit  ↑↓ History  PgUp/PgDn Scroll  Mouse Wheel"
+	
+	// viewportのスクロール情報を取得
+	scrollInfo := ""
+	if m.ready {
+		scrollPercent := m.viewport.ScrollPercent()
+		if scrollPercent <= 0.0 {
+			scrollInfo = "⬆ TOP"
+		} else if scrollPercent >= 1.0 {
+			scrollInfo = "⬇ BOTTOM"
+		} else {
+			scrollInfo = fmt.Sprintf("📜 %.0f%%", scrollPercent*100)
+		}
+	}
 	
 	// ステータスバーの組み立て
-	statusBar := fmt.Sprintf("Mode:%s  Status:%s  Errors:%d  Cmd:%s  %s",
+	statusBar := fmt.Sprintf("Mode:%s  Status:%s  Errors:%d",
 		m.modeStringShort(),
 		m.statusStringShort(),
 		m.errorCount,
-		cmd,
-		help,
 	)
+	
+	if scrollInfo != "" {
+		statusBar = fmt.Sprintf("%s  [%s]  %s", statusBar, scrollInfo, help)
+	} else {
+		statusBar = fmt.Sprintf("%s  %s", statusBar, help)
+	}
 	
 	return faint.Render(statusBar)
 }
@@ -481,22 +592,20 @@ func (m Model) renderHeader() string {
 }
 
 func (m Model) View() string {
-    // ヘッダー
-    header := m.renderHeader()
+    if !m.ready {
+        // viewport初期化前は従来通りの表示
+        return m.buildContent()
+    }
     
-    // ASCIIロゴ
-    ascii := m.renderQubeASCII()
-
-    // 出力
-    output := m.renderOutput()
-
-    // 入力
+    // スクロール可能部分（viewport）
+    scrollableContent := m.viewport.View()
+    
+    // 固定部分
     input := m.renderInput()
-
-    // ステータスバー
     statusBar := m.renderStatusBar()
-
-    return strings.Join([]string{header, ascii, output, input, statusBar}, "\n")
+    
+    // レイアウト組み立て：スクロール可能部分 + 固定部分
+    return strings.Join([]string{scrollableContent, input, statusBar}, "\n")
 }
 
 // 描画用の表記変換ヘルパ

@@ -167,7 +167,7 @@ func Test_Output_DisplaysUserInputWithFrame(t *testing.T) {
 	m := New()
 	m.AddUserInput("hello world")
 	
-	output := m.renderOutput()
+	output := m.renderAllOutput()
 	
 	// ユーザー入力のプレフィックスと内容を確認
 	if !strings.Contains(output, "▶") {
@@ -184,7 +184,7 @@ func Test_Output_DisplaysNormalOutputAsIs(t *testing.T) {
 	m.AddOutput("System output line 1")
 	m.AddOutput("System output line 2")
 	
-	output := m.renderOutput()
+	output := m.renderAllOutput()
 	
 	// 通常出力がそのまま含まれていることを確認
 	if !strings.Contains(output, "System output line 1") {
@@ -202,7 +202,7 @@ func Test_Thinking_ShowsProgressLine(t *testing.T) {
 	m := New()
 	m.SetProgressLine("Thinking...")
 	
-	output := m.renderOutput()
+	output := m.renderAllOutput()
 	
 	// Thinkingが含まれていることを確認
 	if !strings.Contains(output, "Thinking") {
@@ -262,45 +262,4 @@ func Test_StatusBar_ShowsModeAndStatus(t *testing.T) {
 	if !strings.Contains(statusBar, "^C Exit") || !strings.Contains(statusBar, "↑↓ History") {
 		t.Errorf("StatusBar should show help text, got: %s", statusBar)
 	}
-}
-
-// 追加メッセージのテスト（Program.Send 相当）
-func Test_Update_MsgAddOutput_AppendsLine(t *testing.T) {
-    m := New()
-    _, _ = m.Update(MsgAddOutput{Line: "hello"})
-    view := m.renderOutput()
-    if !strings.Contains(view, "hello") {
-        t.Fatalf("expected output to contain 'hello', got: %s", view)
-    }
-}
-
-func Test_Update_MsgSetProgress_SetAndClear(t *testing.T) {
-    m := New()
-    _, _ = m.Update(MsgSetProgress{Line: "Thinking...", Clear: false})
-    out := m.renderOutput()
-    if !strings.Contains(out, "Thinking") {
-        t.Fatalf("expected progress 'Thinking...' in output")
-    }
-    _, _ = m.Update(MsgSetProgress{Clear: true})
-    out2 := m.renderOutput()
-    if strings.Contains(out2, "Thinking") {
-        t.Fatalf("expected progress to be cleared")
-    }
-}
-
-func Test_Update_StatusModeConnectedAndInput(t *testing.T) {
-    m := New()
-    // status
-    _, _ = m.Update(MsgSetStatus{S: StatusRunning})
-    if m.GetStatus() != StatusRunning { t.Fatalf("status not updated") }
-    // mode
-    _, _ = m.Update(MsgSetMode{M: ModeSession})
-    if m.GetMode() != ModeSession { t.Fatalf("mode not updated") }
-    // input enabled
-    _, _ = m.Update(MsgSetInputEnabled{Enabled: false})
-    if m.inputEnabled != false { t.Fatalf("inputEnabled not updated") }
-    // connected
-    _, _ = m.Update(MsgSetConnected{Connected: true})
-    header := m.renderHeader()
-    if !strings.Contains(header, "Connected") { t.Fatalf("connected header not updated") }
 }

@@ -84,7 +84,8 @@ func main() {
     m := ui.NewWithExecutor(cmdExecutor)
 
     // Program を先に作成して、goroutine から安全に UI を更新する
-    p := tea.NewProgram(&m)
+    // マウスサポートを有効にしてviewportのスクロールを可能にする
+    p := tea.NewProgram(&m, tea.WithMouseCellMotion())
 
     // セッションからの出力をStreamProcessor経由でUIに伝播（Program.Send 経由）
     rawSess.OnData = func(data []byte) {
