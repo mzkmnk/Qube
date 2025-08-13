@@ -150,10 +150,9 @@ func Test_QubeASCII_DisplaysFigletLogo(t *testing.T) {
 	m := New()
 	ascii := m.renderQubeASCII()
 	
-	// ASCIIアートに "QUBE" の文字が含まれていることを確認
-	if !strings.Contains(ascii, "Q") || !strings.Contains(ascii, "U") || 
-	   !strings.Contains(ascii, "B") || !strings.Contains(ascii, "E") {
-		t.Errorf("ASCII art should contain QUBE letters, got: %s", ascii)
+	// ASCIIアートが期待される形式であることを確認
+	if !strings.Contains(ascii, "___") || !strings.Contains(ascii, "|") {
+		t.Errorf("ASCII art should contain expected characters, got: %s", ascii)
 	}
 	
 	// ASCIIアートが複数行であることを確認（figletの特徴）

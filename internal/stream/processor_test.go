@@ -40,10 +40,10 @@ func streamAll(t *testing.T, processor *Processor, input string) []string {
 func Test_FixturesMatchGolden(t *testing.T) {
 	root, err := os.Getwd()
 	if err != nil { t.Fatal(err) }
-    // go/internal/stream 配下で動くことを想定し、リポジトリルートを解決
+    // internal/stream 配下で動くことを想定し、リポジトリルートを解決
 	var repoRoot string
-	if strings.HasSuffix(root, filepath.Join("go", "internal", "stream")) {
-		repoRoot = strings.TrimSuffix(root, filepath.Join("go", "internal", "stream"))
+	if strings.HasSuffix(root, filepath.Join("internal", "stream")) {
+		repoRoot = strings.TrimSuffix(root, filepath.Join("internal", "stream"))
 	} else {
 		repoRoot = root
 	}

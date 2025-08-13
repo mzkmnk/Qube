@@ -27,5 +27,5 @@ jobs:
       - name: Build
         run: go build -o qube ./cmd/qube
 
-      - name: Test Core Packages  
-        run: go test ./internal/executor
+      - name: Test
+        run: go test -v -short ./...

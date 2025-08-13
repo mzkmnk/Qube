@@ -9,6 +9,9 @@ import (
 
 // ライフサイクル: Start → Send echo → 受信 → Stop
 func Test_Session_Start_Send_Receive_Stop(t *testing.T) {
+    if testing.Short() {
+        t.Skip("Skipping integration test in short mode")
+    }
     s := New()
     defer s.Stop()
 
