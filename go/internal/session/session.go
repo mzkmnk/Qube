@@ -22,6 +22,14 @@ type Session struct {
     OnData  func([]byte) // シェル出力受信時に呼ばれる
     OnExit  func(int)    // プロセス終了時に終了コード付きで呼ばれる
     OnError func(error)  // 受信/待機中のエラー通知
+    OnInitialized func() // 初期化完了時に呼ばれる（chatモード）
+
+    // 初期化検知（chatモードのみ有効）
+    initEnabled  bool
+    initialized  bool
+    initDet      *initDetector
+    initTimer    *time.Timer
+    mu           sync.Mutex
 }
 
 func New() *Session { return &Session{} }
@@ -60,8 +68,19 @@ func (s *Session) Start(mode string) error {
     switch mode {
     case "chat":
         args = []string{qPath, "chat"}
+        s.initEnabled = true
+        s.initialized = false
+        s.initDet = newInitDetector()
+        // タイムアウトで初期化完了扱い
+        s.initTimer = time.AfterFunc(10*time.Second, func() {
+            s.mu.Lock()
+            s.initialized = true
+            s.mu.Unlock()
+            if s.OnInitialized != nil { s.OnInitialized() }
+        })
     default:
         args = []string{qPath, mode}
+        s.initEnabled = false
     }
 
     s.cmd = exec.Command(args[0], args[1:]...)
@@ -82,11 +101,33 @@ func (s *Session) Start(mode string) error {
         buf := make([]byte, 4096)
         for {
             n, err := r.Read(buf)
-            if n > 0 && s.OnData != nil {
-                // バッファ使い回しによる裏配列共有を避けるためコピー
-                b := make([]byte, n)
-                copy(b, buf[:n])
-                s.OnData(b)
+            if n > 0 {
+                // 初期化検知（chatモードのみ）
+                forward := true
+                if s.initEnabled {
+                    s.mu.Lock()
+                    inited := s.initialized
+                    s.mu.Unlock()
+                    if !inited {
+                        if s.initDet.Feed(string(buf[:n])) {
+                            s.mu.Lock()
+                            s.initialized = true
+                            s.mu.Unlock()
+                            if s.initTimer != nil {
+                                s.initTimer.Stop()
+                            }
+                            if s.OnInitialized != nil { s.OnInitialized() }
+                        }
+                        // 初期化完了まではUIに流さない
+                        forward = false
+                    }
+                }
+                if forward && s.OnData != nil {
+                    // バッファ使い回しによる裏配列共有を避けるためコピー
+                    b := make([]byte, n)
+                    copy(b, buf[:n])
+                    s.OnData(b)
+                }
             }
             if err != nil {
                 if errors.Is(err, io.EOF) {
@@ -113,6 +154,9 @@ func (s *Session) Start(mode string) error {
                 if s.OnError != nil { s.OnError(err) }
                 code = -1
             }
+        }
+        if s.initTimer != nil {
+            s.initTimer.Stop()
         }
         if s.OnExit != nil { s.OnExit(code) }
     }()

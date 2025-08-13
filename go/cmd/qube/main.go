@@ -133,7 +133,8 @@ func main() {
         func(mode string) {
             if mode == "session" {
                 p.Send(ui.MsgSetMode{M: ui.ModeSession})
-                p.Send(ui.MsgSetConnected{Connected: true})
+                // 初期化までは Connecting のまま
+                p.Send(ui.MsgSetConnected{Connected: false})
                 // チャット入力を即有効
                 p.Send(ui.MsgSetInputEnabled{Enabled: true})
             } else {
@@ -149,6 +150,12 @@ func main() {
             p.Send(ui.MsgAddOutput{Line: "Error: " + err.Error()})
         },
     )
+
+    // セッション初期化完了で Connected に切替、status を ready に戻す
+    rawSess.OnInitialized = func() {
+        p.Send(ui.MsgSetConnected{Connected: true})
+        p.Send(ui.MsgSetStatus{S: ui.StatusReady})
+    }
 
     // 初期化時に自動的にchatセッションを開始
     go func() {
