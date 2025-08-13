@@ -118,6 +118,7 @@ type Model struct {
 
     // 内部スクロール用ビューポート
     vp             viewport.Model
+    autoScroll     bool // 最下部に追従するか（ユーザが上にスクロールしたらfalse）
 }
 
 func New() Model {
@@ -138,6 +139,7 @@ func New() Model {
         height:       24,  // デフォルト高さ
         executor:     nil, // 後でSetExecutorで設定
         vp:           viewport.New(78, 8),
+        autoScroll:   true,
     }
 }
 
@@ -271,6 +273,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         } else {
             m.vp = vpModel
         }
+        // ユーザ操作で最下部でなければautoScrollを解除、最下部に戻ったら再度有効
+        if m.vp.AtBottom() {
+            m.autoScroll = true
+        } else {
+            m.autoScroll = false
+        }
     }
 
     switch v := msg.(type) {
@@ -290,9 +298,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         }
         return m, tea.Batch(cmds...)
     case MsgAddOutput:
-        wasBottom := m.vp.AtBottom()
         m.AddOutput(v.Line)
-        m.refreshViewport(wasBottom)
+        m.refreshViewport(m.autoScroll)
         return m, tea.Batch(cmds...)
     case MsgSetProgress:
         if v.Clear {
@@ -301,7 +308,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             m.SetProgressLine(v.Line)
         }
         // 進捗は末尾表示に反映
-        m.refreshViewport(false)
+        m.refreshViewport(m.autoScroll)
         return m, tea.Batch(cmds...)
     case MsgSetStatus:
         m.SetStatus(v.S)
@@ -341,9 +348,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             m.history.Add(text)
             m.input = ""
             // ユーザー入力を表示に追加
-            wasBottom := m.vp.AtBottom()
             m.AddUserInput(text)
-            m.refreshViewport(wasBottom)
+            m.refreshViewport(m.autoScroll)
             return m, func() tea.Msg { return MsgSubmit{Value: text} }
         case tea.KeyBackspace, tea.KeyCtrlH:
             // バックスペースで末尾 1 文字（rune）を削除
