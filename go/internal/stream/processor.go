@@ -108,10 +108,17 @@ func (p *Processor) ProcessData(_type string, data string) {
 			if p.onProgressUpdate != nil { p.onProgressUpdate(nil) }
 		}
 
-        // エコーバック抑制: lastSentCommand と完全一致なら除外
-		if p.lastSentCommand != nil && trimmed == *p.lastSentCommand {
-			p.lastSentCommand = nil
-			continue
+        // エコーバック抑止
+        // - 完全一致
+        // - 末尾一致（枠線プレフィックス付き）
+        // - サブストリング一致（Q CLI がプロンプト等と混在させる場合を考慮して最初の1回のみ）
+		if p.lastSentCommand != nil {
+			if trimmed == *p.lastSentCommand ||
+                looksLikeBorderPrefixedEcho(trimmed, *p.lastSentCommand) ||
+                strings.Contains(trimmed, *p.lastSentCommand) {
+				p.lastSentCommand = nil
+				continue
+			}
 		}
 
 		linesToAdd = append(linesToAdd, line)
@@ -122,6 +129,25 @@ func (p *Processor) ProcessData(_type string, data string) {
 	if len(linesToAdd) > 0 && p.onLinesReady != nil {
 		p.onLinesReady(linesToAdd)
 	}
+}
+
+// looksLikeBorderPrefixedEcho は、枠線文字などの接頭辞が付いていても
+// 末尾が直前の送信コマンドと一致する行をエコーバックとして扱う
+func looksLikeBorderPrefixedEcho(line, cmd string) bool {
+    if cmd == "" { return false }
+    if !strings.HasSuffix(line, cmd) { return false }
+    prefix := strings.TrimSpace(line[:len(line)-len(cmd)])
+    if prefix == "" { return false }
+    // 枠線・罫線に使われがちな文字のみで構成されているか
+    for _, r := range prefix {
+        switch r {
+        case '╭','╮','╯','╰','│','─','┌','┐','┘','└','┃','━','┏','┓','┛','┗','—','·','•':
+            // 許可
+        default:
+            return false
+        }
+    }
+    return true
 }
 
 // GetCurrentProgressLine は現在の進捗行を返す
