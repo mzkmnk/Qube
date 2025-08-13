@@ -111,10 +111,20 @@ func main() {
             switch status {
             case "ready":
                 p.Send(ui.MsgSetStatus{S: ui.StatusReady})
-                p.Send(ui.MsgSetInputEnabled{Enabled: true})
+                // セッションモードでは常に入力を有効化
+                if cmdExecutor.GetMode() == "session" {
+                    p.Send(ui.MsgSetInputEnabled{Enabled: true})
+                } else {
+                    p.Send(ui.MsgSetInputEnabled{Enabled: true})
+                }
             case "running":
                 p.Send(ui.MsgSetStatus{S: ui.StatusRunning})
-                p.Send(ui.MsgSetInputEnabled{Enabled: false})
+                // セッション実行中は入力有効（チャット入力を許可）
+                if cmdExecutor.GetMode() == "session" {
+                    p.Send(ui.MsgSetInputEnabled{Enabled: true})
+                } else {
+                    p.Send(ui.MsgSetInputEnabled{Enabled: false})
+                }
             case "error":
                 p.Send(ui.MsgSetStatus{S: ui.StatusError})
                 p.Send(ui.MsgSetInputEnabled{Enabled: true})
@@ -124,6 +134,8 @@ func main() {
             if mode == "session" {
                 p.Send(ui.MsgSetMode{M: ui.ModeSession})
                 p.Send(ui.MsgSetConnected{Connected: true})
+                // チャット入力を即有効
+                p.Send(ui.MsgSetInputEnabled{Enabled: true})
             } else {
                 p.Send(ui.MsgSetMode{M: ui.ModeCommand})
             }
