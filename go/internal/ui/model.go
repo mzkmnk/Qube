@@ -396,7 +396,7 @@ func (m Model) renderQubeASCII() string {
 }
 
 // renderOutput は出力部分のレンダリングを行う
-func (m Model) renderOutput() string {
+func (m *Model) renderOutput() string {
     var result []string
 	
 	// スタイル定義
@@ -515,7 +515,7 @@ func (m Model) renderHeader() string {
 	return header
 }
 
-func (m Model) View() string {
+func (m *Model) View() string {
     // ヘッダー
     header := m.renderHeader()
     
@@ -594,6 +594,7 @@ func (m *Model) resizeViewport() {
     if w < 10 { w = m.width }
     m.vp.Width = w
     m.vp.Height = h
+    m.vp.MouseWheelEnabled = true
     m.refreshViewport(false)
 }
 
