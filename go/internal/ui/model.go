@@ -36,6 +36,18 @@ const (
 
 type MsgSubmit struct{ Value string }
 
+// 外部イベント用の追加メッセージ
+// goroutine から UI を安全に更新するため、tea.Program.Send で送出する
+type MsgAddOutput struct{ Line string }
+type MsgSetProgress struct{ Line string; Clear bool }
+type MsgSetStatus struct{ S Status }
+type MsgSetMode struct{ M Mode }
+type MsgSetInputEnabled struct{ Enabled bool }
+type MsgSetConnected struct{ Connected bool }
+type MsgIncrementError struct{}
+// 画面と出力履歴のクリア要求
+type MsgClearScreen struct{}
+
 // History はポインタ移動可能なシンプルなコマンド履歴。
 // 連続重複の除外やポインタ移動など、Node 版（src/lib/history.ts）に概ね合わせる。
 
@@ -71,6 +83,19 @@ func (h *History) Next() (string, bool) {
 	return h.items[h.pointer], true
 }
 
+// CommandExecutorInterface はコマンド実行を抽象化するインターフェース
+type CommandExecutorInterface interface {
+	Execute(command string) error
+	SetEventHandlers(
+		onStatusChange func(string),
+		onModeChange func(string),
+		onOutput func(string),
+		onError func(error),
+	)
+	GetMode() string
+	GetStatus() string
+}
+
 // Model は最小プロトタイプに必要な UI の状態を保持する。
 
 type Model struct {
@@ -88,6 +113,7 @@ type Model struct {
 	inputEnabled   bool    // 入力の有効/無効状態
 	width          int     // ターミナルの幅
 	height         int     // ターミナルの高さ
+	executor       CommandExecutorInterface // コマンド実行を管理
 }
 
 func New() Model {
@@ -106,6 +132,55 @@ func New() Model {
 		inputEnabled: true,
 		width:        80,  // デフォルト幅
 		height:       24,  // デフォルト高さ
+		executor:     nil, // 後でSetExecutorで設定
+	}
+}
+
+// NewWithExecutor はCommandExecutorを指定してModelを作成する
+func NewWithExecutor(executor CommandExecutorInterface) Model {
+	m := New()
+	m.SetExecutor(executor)
+	return m
+}
+
+// SetExecutor はCommandExecutorを設定し、イベントハンドラーを登録する
+func (m *Model) SetExecutor(executor CommandExecutorInterface) {
+	m.executor = executor
+	if executor != nil {
+		// イベントハンドラーを設定
+		executor.SetEventHandlers(
+			// onStatusChange
+			func(status string) {
+				switch status {
+				case "ready":
+					m.SetStatus(StatusReady)
+					m.SetInputEnabled(true)
+				case "running":
+					m.SetStatus(StatusRunning)
+					m.SetInputEnabled(false)
+				case "error":
+					m.SetStatus(StatusError)
+					m.SetInputEnabled(true)
+				}
+			},
+			// onModeChange
+			func(mode string) {
+				if mode == "session" {
+					m.SetMode(ModeSession)
+				} else {
+					m.SetMode(ModeCommand)
+				}
+			},
+			// onOutput
+			func(output string) {
+				m.AddOutput(output)
+			},
+			// onError
+			func(err error) {
+				m.IncrementErrorCount()
+				m.AddOutput("Error: " + err.Error())
+			},
+		)
 	}
 }
 
@@ -146,6 +221,41 @@ func (m *Model) SetInputEnabled(enabled bool) {
 	m.inputEnabled = enabled
 }
 
+// SetMode はモードを設定する
+func (m *Model) SetMode(mode Mode) {
+	m.mode = mode
+}
+
+// GetMode は現在のモードを取得する
+func (m *Model) GetMode() Mode {
+	return m.mode
+}
+
+// SetStatus はステータスを設定する
+func (m *Model) SetStatus(status Status) {
+	m.status = status
+}
+
+// GetStatus は現在のステータスを取得する
+func (m *Model) GetStatus() Status {
+	return m.status
+}
+
+// IncrementErrorCount はエラーカウントを増加させる
+func (m *Model) IncrementErrorCount() {
+	m.errorCount++
+}
+
+// GetErrorCount はエラーカウントを取得する
+func (m *Model) GetErrorCount() int {
+	return m.errorCount
+}
+
+// SetCurrentCommand は現在実行中のコマンドを設定する
+func (m *Model) SetCurrentCommand(command string) {
+	m.currentCommand = command
+}
+
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch v := msg.(type) {
     case tea.WindowSizeMsg:
@@ -153,6 +263,50 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.width = v.Width
         m.height = v.Height
         return m, nil
+    case MsgSubmit:
+        // MsgSubmitを受け取った時にCommandExecutorを呼び出す
+        if m.executor != nil {
+            m.SetCurrentCommand(v.Value)
+            go func() {
+                _ = m.executor.Execute(v.Value)
+            }()
+        }
+        return m, nil
+    case MsgAddOutput:
+        m.AddOutput(v.Line)
+        return m, nil
+    case MsgSetProgress:
+        if v.Clear {
+            m.progressLine = nil
+        } else {
+            m.SetProgressLine(v.Line)
+        }
+        return m, nil
+    case MsgSetStatus:
+        m.SetStatus(v.S)
+        return m, nil
+    case MsgSetMode:
+        m.SetMode(v.M)
+        return m, nil
+    case MsgSetInputEnabled:
+        m.SetInputEnabled(v.Enabled)
+        return m, nil
+    case MsgSetConnected:
+        m.SetConnected(v.Connected)
+        return m, nil
+    case MsgIncrementError:
+        m.IncrementErrorCount()
+        return m, nil
+    case MsgClearScreen:
+        // 出力履歴と進捗をクリア
+        m.lines = []string{}
+        m.progressLine = nil
+        // 物理画面もクリア（スクロールバック含め可能な範囲で）
+        return m, func() tea.Msg {
+            // ESC[3J: スクロールバック消去, ESC[H: カーソル先頭, ESC[2J: 画面消去
+            print("\x1b[3J\x1b[H\x1b[2J")
+            return nil
+        }
     case tea.KeyMsg:
         switch v.Type {
         case tea.KeyCtrlC:
@@ -162,6 +316,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             if text == "" { return m, nil }
             m.history.Add(text)
             m.input = ""
+            // ユーザー入力を表示に追加
+            m.AddUserInput(text)
             return m, func() tea.Msg { return MsgSubmit{Value: text} }
         case tea.KeyBackspace, tea.KeyCtrlH:
             // バックスペースで末尾 1 文字（rune）を削除
@@ -216,7 +372,7 @@ func (m Model) renderOutput() string {
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("14")).
-		PaddingLeft(1).PaddingRight(1)
+		Width(m.width - 2)
 	
 	for _, line := range m.lines {
 		if strings.HasPrefix(line, "USER_INPUT:") {
@@ -251,7 +407,7 @@ func (m Model) renderInput() string {
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		Padding(0, 1).
-		Width(m.width - 2) // ターミナル幅より少し小さく
+		Width(m.width - 2)
 	
 	// プロンプトの選択
 	var prompt string

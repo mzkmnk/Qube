@@ -6,7 +6,6 @@ import (
     "io"
     "os"
     "os/exec"
-    "runtime"
     "sync"
     "syscall"
     "time"
@@ -23,25 +22,78 @@ type Session struct {
     OnData  func([]byte) // シェル出力受信時に呼ばれる
     OnExit  func(int)    // プロセス終了時に終了コード付きで呼ばれる
     OnError func(error)  // 受信/待機中のエラー通知
+    OnInitialized func() // 初期化完了時に呼ばれる（chatモード）
+
+    // 初期化検知（chatモードのみ有効）
+    initEnabled  bool
+    initialized  bool
+    initDet      *initDetector
+    initTimer    *time.Timer
+    mu           sync.Mutex
 }
 
 func New() *Session { return &Session{} }
 
-// Start は PTY 上に対話シェルを起動する。
-func (s *Session) Start(_mode string) error {
-    var shell string
-    if runtime.GOOS == "windows" {
-        shell = "cmd.exe"
-    } else {
-        shell = "sh"
+// detectQCLI はAmazon Q CLIのバイナリパスを検出する（内部使用）
+func detectQCLI() (string, error) {
+    // Q_BIN環境変数が設定されている場合
+    if qBin := os.Getenv("Q_BIN"); qBin != "" {
+        if path, err := exec.LookPath(qBin); err == nil {
+            return path, nil
+        }
+        return "", errors.New("Q_BIN環境変数で指定されたAmazon Q CLIが見つかりません")
     }
 
-    s.cmd = exec.Command(shell, "-i")
+    // PATHから検索
+    candidates := []string{"amazonq", "q"}
+    for _, candidate := range candidates {
+        if path, err := exec.LookPath(candidate); err == nil {
+            return path, nil
+        }
+    }
+
+    return "", errors.New("Amazon Q CLIが見つかりません。Q_BIN環境変数を設定するか、amazonqをインストールしてください")
+}
+
+// Start は PTY 上にQ CLIセッションを起動する。
+func (s *Session) Start(mode string) error {
+    // Q CLIバイナリパスを検出
+    qPath, err := detectQCLI()
+    if err != nil {
+        return err
+    }
+
+    // modeに応じたコマンドを構築（現在はchatのみ対応）
+    var args []string
+    switch mode {
+    case "chat":
+        args = []string{qPath, "chat"}
+        s.initEnabled = true
+        s.initialized = false
+        s.initDet = newInitDetector()
+        // タイムアウトで初期化完了扱い
+        s.initTimer = time.AfterFunc(10*time.Second, func() {
+            s.mu.Lock()
+            s.initialized = true
+            s.mu.Unlock()
+            if s.OnInitialized != nil { s.OnInitialized() }
+        })
+    default:
+        args = []string{qPath, mode}
+        s.initEnabled = false
+    }
+
+    s.cmd = exec.Command(args[0], args[1:]...)
+    // Node版と同様にTERMを明示
+    s.cmd.Env = append(os.Environ(), "TERM=xterm-256color")
     f, err := ptypkg.Start(s.cmd)
     if err != nil {
         return err
     }
     s.pty = f
+
+    // デフォルトのPTYサイズを指定（Node版: cols=80, rows=30）
+    _ = ptypkg.Setsize(s.pty, &ptypkg.Winsize{Rows: 30, Cols: 80})
 
     // Reader ゴルーチン
     go func() {
@@ -49,11 +101,33 @@ func (s *Session) Start(_mode string) error {
         buf := make([]byte, 4096)
         for {
             n, err := r.Read(buf)
-            if n > 0 && s.OnData != nil {
-                // バッファ使い回しによる裏配列共有を避けるためコピー
-                b := make([]byte, n)
-                copy(b, buf[:n])
-                s.OnData(b)
+            if n > 0 {
+                // 初期化検知（chatモードのみ）
+                forward := true
+                if s.initEnabled {
+                    s.mu.Lock()
+                    inited := s.initialized
+                    s.mu.Unlock()
+                    if !inited {
+                        if s.initDet.Feed(string(buf[:n])) {
+                            s.mu.Lock()
+                            s.initialized = true
+                            s.mu.Unlock()
+                            if s.initTimer != nil {
+                                s.initTimer.Stop()
+                            }
+                            if s.OnInitialized != nil { s.OnInitialized() }
+                        }
+                        // 初期化完了まではUIに流さない
+                        forward = false
+                    }
+                }
+                if forward && s.OnData != nil {
+                    // バッファ使い回しによる裏配列共有を避けるためコピー
+                    b := make([]byte, n)
+                    copy(b, buf[:n])
+                    s.OnData(b)
+                }
             }
             if err != nil {
                 if errors.Is(err, io.EOF) {
@@ -81,6 +155,9 @@ func (s *Session) Start(_mode string) error {
                 code = -1
             }
         }
+        if s.initTimer != nil {
+            s.initTimer.Stop()
+        }
         if s.OnExit != nil { s.OnExit(code) }
     }()
 
@@ -90,7 +167,9 @@ func (s *Session) Start(_mode string) error {
 // Send は PTY に 1 行書き込む（CRLF 付与）。
 func (s *Session) Send(text string) error {
     if s.pty == nil { return errors.New("session not started") }
-    _, err := s.pty.Write([]byte(text + "\r\n"))
+    // Node版は input+"\r" を送信している
+    // Go版も同等にするため、引数をそのまま書き出す
+    _, err := s.pty.Write([]byte(text))
     return err
 }
 

@@ -88,13 +88,16 @@
 - [x] StatusBar: `mode`（Cmd/Chat）、`status`、`errorCount`、`currentCommand` 省略表示、ヘルプ `^C Exit ↑↓ History`
 
 ## 9. UIとバックエンドの統合
-- [ ] main.go に CommandExecutor の初期化と起動処理を追加
-- [ ] UI の MsgSubmit を CommandExecutor.Execute() に接続
-- [ ] CommandExecutor の出力イベントを UI の Update に伝播
-- [ ] セッション出力のストリーミング表示（OnData → AddOutput）
-- [ ] エラーハンドリング（OnError → errorCount 増加、status 更新）
-- [ ] モード切替の実装（command/session の自動判定）
-- [ ] 初期化時の自動 chat セッション開始
+- [x] main.go に CommandExecutor の初期化と起動処理を追加
+- [x] UI の MsgSubmit を CommandExecutor.Execute() に接続
+- [x] CommandExecutor の出力イベントを UI の Update に伝播
+- [x] セッション出力のストリーミング表示（OnData → AddOutput）
+- [x] エラーハンドリング（OnError → errorCount 増加、status 更新）
+- [x] モード切替の実装（command/session の自動判定）
+- [x] 初期化時の自動 chat セッション開始
+- [x] Q CLI検出機能の実装（環境変数 Q_BIN、PATH検索）
+- [x] 実際のQ CLIバイナリを使用した短命コマンド実行
+- [x] PTYセッションで実際のQ CLIを起動
 
 ## 10. 併存検証（開発者向け）
 - [ ] `npm run start:go` で Go 版を起動（開発者ローカルのみ）
