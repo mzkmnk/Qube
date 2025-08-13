@@ -9,4 +9,8 @@ go/.gocache/
 .vscode/
 .idea/
 
+# serena mcp
 .serena
+
+# crush
+**/.crush/
