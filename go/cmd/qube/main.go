@@ -82,6 +82,8 @@ func main() {
     
     // UIモデルを作成し、CommandExecutorを設定
     m := ui.NewWithExecutor(cmdExecutor)
+    // 起動時に即座に接続状態をtrueに設定
+    m.SetConnected(true)
 
     // Program を先に作成して、goroutine から安全に UI を更新する
     // マウスサポートを有効にしてviewportのスクロールを可能にする

@@ -2,7 +2,9 @@ package ui
 
 import (
     "fmt"
+    "math/rand"
     "strings"
+    "time"
 
     tea "github.com/charmbracelet/bubbletea"
     "github.com/charmbracelet/lipgloss"
@@ -48,6 +50,11 @@ type MsgSetConnected struct{ Connected bool }
 type MsgIncrementError struct{}
 // 画面と出力履歴のクリア要求
 type MsgClearScreen struct{}
+
+// スクランブルアニメーション制御用メッセージ
+type MsgScrambleUpdate struct{}
+type MsgScrambleStart struct{ Base string }
+type MsgScrambleStop struct{}
 
 // History はポインタ移動可能なシンプルなコマンド履歴。
 // 連続重複の除外やポインタ移動など、Node 版（src/lib/history.ts）に概ね合わせる。
@@ -117,6 +124,11 @@ type Model struct {
 	viewport       viewport.Model // アプリ全体のスクロール管理
 	ready          bool    // viewportの準備ができているか
 	executor       CommandExecutorInterface // コマンド実行を管理
+	
+	// スクランブルアニメーション用フィールド
+	scrambleActive bool   // スクランブルアニメーション中か
+	scrambleBase   string // 元の文字列（"Thinking..."）
+	scrambleText   string // 現在表示する文字列
 }
 
 func New() Model {
@@ -137,6 +149,11 @@ func New() Model {
 		height:       24,  // デフォルト高さ
 		ready:        false, // viewport初期化前
 		executor:     nil, // 後でSetExecutorで設定
+		
+		// スクランブルアニメーション用フィールドの初期化
+		scrambleActive: false,
+		scrambleBase:   "",
+		scrambleText:   "",
 	}
 }
 
@@ -220,6 +237,14 @@ func (m *Model) AddOutput(output string) {
 // SetProgressLine は進捗行を設定する
 func (m *Model) SetProgressLine(line string) {
 	m.progressLine = &line
+	
+	// "Thinking"以外の場合はスクランブルアニメーションを停止
+	if !strings.Contains(strings.ToLower(line), "thinking") {
+		if m.scrambleActive {
+			m.stopScrambleAnimation()
+		}
+	}
+	
 	m.updateViewportContent()
 }
 
@@ -285,9 +310,9 @@ func (m *Model) buildScrollableContent() string {
 	output := m.renderAllOutput()
 
 	// progressLineがある場合は追加
-	if m.progressLine != nil {
-		faintStyle := lipgloss.NewStyle().Faint(true)
-		output += "\n" + faintStyle.Render(*m.progressLine)
+	progressRendered := m.renderProgressLine()
+	if progressRendered != "" {
+		output += "\n" + progressRendered
 	}
 
 	return strings.Join([]string{header, ascii, output}, "\n")
@@ -305,9 +330,9 @@ func (m *Model) buildContent() string {
 	output := m.renderAllOutput()
 
 	// progressLineがある場合は追加
-	if m.progressLine != nil {
-		faintStyle := lipgloss.NewStyle().Faint(true)
-		output += "\n" + faintStyle.Render(*m.progressLine)
+	progressRendered := m.renderProgressLine()
+	if progressRendered != "" {
+		output += "\n" + progressRendered
 	}
 
 	// 入力
@@ -392,8 +417,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     case MsgSetProgress:
         if v.Clear {
             m.progressLine = nil
+            // 進捗クリア時はスクランブルアニメーションも停止
+            if m.scrambleActive {
+                m.stopScrambleAnimation()
+            }
         } else {
             m.SetProgressLine(v.Line)
+            // "Thinking"が含まれる場合はスクランブルアニメーションを開始
+            if strings.Contains(strings.ToLower(v.Line), "thinking") && !m.scrambleActive {
+                return m, m.startScrambleAnimation("Thinking...")
+            }
         }
         return m, nil
     case MsgSetStatus:
@@ -415,6 +448,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         // 出力履歴と進捗をクリア
         m.lines = []string{}
         m.progressLine = nil
+        // スクランブルアニメーションも停止
+        m.stopScrambleAnimation()
         // viewportのコンテンツもクリア
         m.updateViewportContent()
         // 物理画面もクリア（スクロールバック含め可能な範囲で）
@@ -423,6 +458,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             print("\x1b[3J\x1b[H\x1b[2J")
             return nil
         }
+    case MsgScrambleUpdate:
+        // スクランブルアニメーションフレーム更新
+        cmd := m.updateScrambleText()
+        // スクランブルテキスト更新後、viewportを更新
+        m.updateViewportContent()
+        return m, cmd
+    case MsgScrambleStart:
+        // スクランブルアニメーション開始
+        return m, m.startScrambleAnimation(v.Base)
+    case MsgScrambleStop:
+        // スクランブルアニメーション停止
+        m.stopScrambleAnimation()
+        return m, nil
     case tea.KeyMsg:
         switch v.Type {
         case tea.KeyCtrlC:
@@ -655,4 +703,106 @@ func (m Model) statusStringShort() string {
     default:
         return "?"
     }
+}
+
+// スクランブルアニメーション用のヘルパー関数
+
+// スクランブル用文字セット（React版のDEFAULT_CHARSETに対応）
+const scrambleCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+// scrambleText は指定された文字列をスクランブル変換する
+// intensity: 0.0-1.0の範囲で文字の変換確率を指定（React版では0.4）
+func scrambleText(base string, intensity float64) string {
+	if base == "" {
+		return ""
+	}
+	
+	chars := []rune(base)
+	charsetRunes := []rune(scrambleCharset)
+	result := make([]rune, len(chars))
+	
+	for i, ch := range chars {
+		// スペースや句読点は保持（React版と同じロジック）
+		if ch == ' ' || ch == '\t' || ch == '\n' {
+			result[i] = ch
+			continue
+		}
+		if ch == '.' || ch == ',' || ch == ':' || ch == ';' || ch == '!' || ch == '?' || 
+		   ch == '-' || ch == '_' || ch == '[' || ch == ']' || ch == '(' || ch == ')' || 
+		   ch == '{' || ch == '}' {
+			result[i] = ch
+			continue
+		}
+		
+		// intensityの確率でランダム文字に置換（React版の実装と同じ）
+		if rand.Float64() < intensity {
+			randomIdx := rand.Intn(len(charsetRunes))
+			result[i] = charsetRunes[randomIdx]
+		} else {
+			// スクランブルしない場合は元の文字をそのまま使用
+			result[i] = ch
+		}
+	}
+	
+	return string(result)
+}
+
+// startScrambleAnimation はスクランブルアニメーションを開始する
+func (m *Model) startScrambleAnimation(base string) tea.Cmd {
+	m.scrambleActive = true
+	m.scrambleBase = base
+	m.scrambleText = base
+	
+	// 30FPSでアニメーション更新を開始
+	return tea.Tick(time.Millisecond*33, func(t time.Time) tea.Msg {
+		return MsgScrambleUpdate{}
+	})
+}
+
+// stopScrambleAnimation はスクランブルアニメーションを停止する
+func (m *Model) stopScrambleAnimation() {
+	m.scrambleActive = false
+	m.scrambleBase = ""
+	m.scrambleText = ""
+}
+
+// updateScrambleText はスクランブルテキストを更新する
+func (m *Model) updateScrambleText() tea.Cmd {
+	if !m.scrambleActive {
+		return nil
+	}
+	
+	// テキストをスクランブル変換（intensity=0.4はReact版と同じ）
+	m.scrambleText = scrambleText(m.scrambleBase, 0.4)
+	
+	// 次のフレームをスケジュール
+	return tea.Tick(time.Millisecond*33, func(t time.Time) tea.Msg {
+		return MsgScrambleUpdate{}
+	})
+}
+
+// renderProgressLine は進捗行をレンダリングし、必要に応じてスクランブルアニメーションを適用する
+func (m *Model) renderProgressLine() string {
+	if m.progressLine == nil {
+		return ""
+	}
+	
+	line := *m.progressLine
+	
+	// "Thinking"が含まれる場合はスクランブルアニメーションを適用
+	if strings.Contains(strings.ToLower(line), "thinking") {
+		// スクランブルアニメーション中の場合はスクランブルテキストを表示
+		if m.scrambleActive && m.scrambleText != "" {
+			scrambleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("11")) // 黄色
+			return scrambleStyle.Render(m.scrambleText)
+		} else {
+			// アニメーション未開始の場合は元のテキストを表示
+			scrambleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("11")) // 黄色
+			return scrambleStyle.Render("Thinking...")
+		}
+	} else {
+		// Thinking以外の進捗は通常のfaintスタイルで表示
+		faintStyle := lipgloss.NewStyle().Faint(true)
+		return faintStyle.Render(line)
+	}
 }
