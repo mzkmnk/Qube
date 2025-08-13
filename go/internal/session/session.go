@@ -118,7 +118,9 @@ func (s *Session) Start(mode string) error {
 // Send は PTY に 1 行書き込む（CRLF 付与）。
 func (s *Session) Send(text string) error {
     if s.pty == nil { return errors.New("session not started") }
-    _, err := s.pty.Write([]byte(text + "\r\n"))
+    // Node版は input+"\r" を送信している
+    // Go版も同等にするため、引数をそのまま書き出す
+    _, err := s.pty.Write([]byte(text))
     return err
 }
 
