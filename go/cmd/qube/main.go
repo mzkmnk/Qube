@@ -133,6 +133,9 @@ func main() {
         func(mode string) {
             if mode == "session" {
                 p.Send(ui.MsgSetMode{M: ui.ModeSession})
+                // 画面クリア → 初期化（React Inkの流れに合わせる）
+                processor.Clear()
+                p.Send(ui.MsgClearScreen{})
                 // 初期化までは Connecting のまま
                 p.Send(ui.MsgSetConnected{Connected: false})
                 // チャット入力を即有効
@@ -153,9 +156,7 @@ func main() {
 
     // セッション初期化完了で Connected に切替、status を ready に戻す
     rawSess.OnInitialized = func() {
-        // ストリームとUIを初期化後のクリーンな状態にする
-        processor.Clear()
-        p.Send(ui.MsgClearScreen{})
+        // 初期化完了で Connected/ready へ切替
         p.Send(ui.MsgSetConnected{Connected: true})
         p.Send(ui.MsgSetStatus{S: ui.StatusReady})
     }
