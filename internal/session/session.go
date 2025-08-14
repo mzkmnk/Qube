@@ -1,7 +1,6 @@
 package session
 
 import (
-    "bufio"
     "errors"
     "io"
     "os"
@@ -9,6 +8,7 @@ import (
     "sync"
     "syscall"
     "time"
+    "unicode/utf8"
 
     ptypkg "github.com/creack/pty"
 )
@@ -97,35 +97,69 @@ func (s *Session) Start(mode string) error {
 
     // Reader ゴルーチン
     go func() {
-        r := bufio.NewReader(f)
         buf := make([]byte, 4096)
+        var remainder []byte // UTF-8境界で分割された不完全バイトを保持
+        
         for {
-            n, err := r.Read(buf)
+            n, err := f.Read(buf)
             if n > 0 {
-                // 初期化検知（chatモードのみ）
+                // 前回の不完全バイトと結合
+                var data []byte
+                if len(remainder) > 0 {
+                    data = append(remainder, buf[:n]...)
+                    remainder = nil
+                } else {
+                    data = buf[:n]
+                }
+                
+                // UTF-8境界で安全に分割
+                validEnd := len(data)
+                for validEnd > 0 && !utf8.Valid(data[:validEnd]) {
+                    // 末尾から1バイトずつ削って有効なUTF-8になるまでチェック
+                    validEnd--
+                }
+                
+                // 有効な部分のみ処理、不完全な部分は次回に持ち越し
+                var validData []byte
+                if validEnd > 0 {
+                    validData = data[:validEnd]
+                    if validEnd < len(data) {
+                        remainder = make([]byte, len(data)-validEnd)
+                        copy(remainder, data[validEnd:])
+                    }
+                } else {
+                    // 全体が無効な場合は次回に持ち越し
+                    remainder = make([]byte, len(data))
+                    copy(remainder, data)
+                    continue
+                }
+                
+                // 初期化検知（chatモードのみ、最初の1回のみ）
                 forward := true
-                if s.initEnabled {
-                    s.mu.Lock()
-                    inited := s.initialized
-                    s.mu.Unlock()
-                    if !inited {
-                        if s.initDet.Feed(string(buf[:n])) {
-                            s.mu.Lock()
-                            s.initialized = true
-                            s.mu.Unlock()
-                            if s.initTimer != nil {
-                                s.initTimer.Stop()
-                            }
-                            if s.OnInitialized != nil { s.OnInitialized() }
+                s.mu.Lock()
+                initEnabled := s.initEnabled
+                inited := s.initialized
+                s.mu.Unlock()
+                
+                if initEnabled && !inited {
+                    if s.initDet.Feed(string(validData)) {
+                        s.mu.Lock()
+                        s.initialized = true
+                        s.initEnabled = false // 初期化完了後は検知を無効化
+                        s.mu.Unlock()
+                        if s.initTimer != nil {
+                            s.initTimer.Stop()
                         }
+                        if s.OnInitialized != nil { s.OnInitialized() }
+                    } else {
                         // 初期化完了まではUIに流さない
                         forward = false
                     }
                 }
                 if forward && s.OnData != nil {
                     // バッファ使い回しによる裏配列共有を避けるためコピー
-                    b := make([]byte, n)
-                    copy(b, buf[:n])
+                    b := make([]byte, len(validData))
+                    copy(b, validData)
                     s.OnData(b)
                 }
             }

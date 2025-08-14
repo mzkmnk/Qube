@@ -28,7 +28,10 @@ func Test_Session_Start_Send_Receive_Stop(t *testing.T) {
         mu.Unlock()
     }
     s.OnExit = func(code int) {}
-    s.OnError = func(err error) { t.Fatalf("session error: %v", err) }
+    s.OnError = func(err error) { 
+        t.Errorf("session error: %v", err)
+        select { case done <- struct{}{}: default: }
+    }
 
     if err := s.Start("session"); err != nil {
         t.Fatalf("start: %v", err)
